@@ -96,3 +96,29 @@ export async function updateExpiry(name: string, createdAt: string, newExpiratio
         .eq("created_at", createdAt);
     if (error) throw error;
 }
+
+/**
+ * Fetches inventory items expiring between today and the next `days` days.
+ * @param days - Number of days ahead to include. Defaults to 5.
+ * @returns Array of soon-to-expire inventory row objects ordered by expiration date.
+ */
+export async function getSoonToExpireItems(days: number = 5) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + days);
+
+    const startIso = today.toISOString().slice(0, 10);
+    const endIso = endDate.toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+        .from("inventory")
+        .select("*")
+        .gte("expiration_date", startIso)
+        .lte("expiration_date", endIso)
+        .order("expiration_date", { ascending: true });
+
+    if (error) throw error;
+    return data;
+}
