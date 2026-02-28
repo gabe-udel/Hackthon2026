@@ -1,6 +1,83 @@
-import { UploadCloud, Utensils, TrendingUp, AlertTriangle } from 'lucide-react';
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3 } from "lucide-react";
+import { getSoonToExpireItems } from "@/lib/supabase/interface";
+
+type InventoryItem = {
+  id: string;
+  name: string;
+  category: string;
+  quantity: string;
+  expiration_date: string;
+};
 
 export default function Dashboard() {
+  const [soonItems, setSoonItems] = useState<InventoryItem[]>([]);
+  const [loadingSoon, setLoadingSoon] = useState(true);
+  const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setTodayMidnightMs(d.getTime());
+
+    async function fetchSoonItems() {
+      setLoadingSoon(true);
+      try {
+        const data = await getSoonToExpireItems(5);
+        if (isMounted) setSoonItems((data ?? []) as InventoryItem[]);
+      } catch (err) {
+        console.error("Failed to fetch soon-to-expire items:", err);
+        if (isMounted) setSoonItems([]);
+      } finally {
+        if (isMounted) setLoadingSoon(false);
+      }
+    }
+
+    fetchSoonItems();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  function daysUntil(dateStr: string) {
+    if (todayMidnightMs === null) return null;
+    const expiry = new Date(dateStr);
+    expiry.setHours(0, 0, 0, 0);
+    return Math.ceil((expiry.getTime() - todayMidnightMs) / (1000 * 60 * 60 * 24));
+  }
+
+  function urgencyStyles(daysLeft: number) {
+    if (daysLeft <= 1) {
+      return {
+        row: "bg-red-50 border-red-200",
+        text: "text-red-900",
+        sub: "text-red-700",
+      };
+    }
+    if (daysLeft <= 3) {
+      return {
+        row: "bg-amber-50 border-amber-200",
+        text: "text-amber-900",
+        sub: "text-amber-700",
+      };
+    }
+    return {
+      row: "bg-yellow-50 border-yellow-200",
+      text: "text-yellow-900",
+      sub: "text-yellow-700",
+    };
+  }
+
+  function expiryLabel(daysLeft: number) {
+    if (daysLeft <= 0) return "Expires today";
+    if (daysLeft === 1) return "Expires in 1 day";
+    return `Expires in ${daysLeft} days`;
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* 1. UPLOAD SECTION - The "Big Action" */}
@@ -19,14 +96,45 @@ export default function Dashboard() {
             <h2 className="text-lg font-bold flex items-center gap-2">
               <AlertTriangle className="text-amber-500" /> Use These Soon
             </h2>
-            <button className="text-green-600 text-sm font-medium">View Full Pantry →</button>
+            <Link href="/inventory" className="text-green-600 text-sm font-medium">
+              View Full Pantry →
+            </Link>
           </div>
           <div className="space-y-3">
-            {/* We'll map through your Supabase data here */}
-            <div className="flex justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-              <span className="font-medium text-red-900">Whole Milk</span>
-              <span className="text-red-700 text-sm italic">Expires in 1 day</span>
-            </div>
+            {loadingSoon && (
+              <p className="text-sm text-slate-500">Loading soon-to-expire items...</p>
+            )}
+
+            {!loadingSoon && soonItems.length === 0 && (
+              <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm">
+                No items expiring in the next 5 days.
+              </div>
+            )}
+
+            {!loadingSoon &&
+              soonItems.map((item) => {
+                const daysLeft = daysUntil(item.expiration_date);
+                if (daysLeft === null) return null;
+                const styles = urgencyStyles(daysLeft);
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex justify-between items-center p-3 rounded-lg border ${styles.row}`}
+                  >
+                    <div className="min-w-0">
+                      <p className={`font-medium ${styles.text}`}>{item.name}</p>
+                      <p className={`text-xs ${styles.sub}`}>
+                        {item.category} • Qty: {item.quantity}
+                      </p>
+                    </div>
+                    <div className={`text-sm italic flex items-center gap-1 ${styles.sub}`}>
+                      <Clock3 className="w-4 h-4" />
+                      {expiryLabel(daysLeft)}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </section>
 
