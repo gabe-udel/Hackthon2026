@@ -13,7 +13,7 @@ export default function RootLayout({
         {/* 1. SIDEBAR (The Navigation "Nerve Center") */}
         <aside className="w-64 bg-white border-r flex flex-col p-6 sticky top-0 h-screen">
           <div className="text-2xl font-extrabold text-green-600 mb-10 tracking-tight">
-            Savor.ai
+            Savor
           </div>
           
           <nav className="flex flex-col space-y-2 flex-1">
