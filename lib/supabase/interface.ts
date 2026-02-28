@@ -66,16 +66,17 @@ export async function addItem(name: string, category: string, quantity: string, 
  * Fetches all inventory items sorted by a chosen column.
  * @param x - Sort mode: 0 = expiration date, 1 = category, 2 = name (alphabetical), 3 = created at.
  *            Defaults to expiration date if an invalid value is provided.
+ * @param ascending - Sort direction. Defaults to true (ascending).
  * @returns Sorted array of inventory row objects.
  */
-export async function sortBy(x: number) {
+export async function sortBy(x: number, ascending: boolean = true) {
     const columns = ["expiration_date", "category", "name", "created_at"];
     const column = columns[x] ?? "expiration_date";
 
     const { data, error } = await supabase
         .from("inventory")
         .select("*")
-        .order(column, { ascending: true });
+        .order(column, { ascending });
 
     if (error) throw error;
     return data;
