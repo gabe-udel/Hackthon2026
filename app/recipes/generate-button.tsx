@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { generateRecipes } from "./gemini_api";
+import { generateRecipes } from "./create_recipes"
 
 export default function GenerateButton() {
   const [recipes, setRecipes] = useState<string[]>([]);

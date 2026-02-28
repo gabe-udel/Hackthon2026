@@ -1,7 +1,6 @@
-import { getAllItems } from "../../lib/supabase/interface";
+import { getAllItems } from "@/lib/supabase/interface";
 
 export async function generateRecipes(): Promise<string[]> {
-    // Generate three recipes based on food items, prioritizing those with closer expiry dates
     const items = await getAllItems();
     return items.map((item: any) => `${item.name} - ${item.category} (qty: ${item.quantity}, expires: ${item.expiration_date})`);
 }
