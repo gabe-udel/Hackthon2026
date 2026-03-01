@@ -1,4 +1,4 @@
-import { getAllItems } from "@/lib/supabase/interface";
+import { getSoonToExpireItems, getAllItems, type InventoryItemRecord } from "@/lib/supabase/interface";
 import { askChat } from "@/lib/openai/openai_interface";
 
 export type Recipe = {
@@ -14,16 +14,13 @@ function createIngredientsList(x: any[]): string {
     return result;
 }
 
-function createRecipePrompt(ingredients: string): string {
-    return `You are a helpful home chef assistant. Below is a list of ingredients the user has, along with their expiration dates (format: name,YYYY-MM-DD). Today's date is ${new Date().toISOString().split("T")[0]}.
+function createRecipePrompt(pantryLines: string): string {
+  const today = new Date().toISOString().split("T")[0];
 
-INGREDIENTS:
-${ingredients}
+  return `You are a helpful home chef. The user has these ingredients in their pantry. Each line is: Ingredient name (quantity and unit) [expires: USE SOON / Xd / —]. Today is ${today}.
 
-Please suggest ONE recipe that:
-1. Prioritizes ingredients that are expiring soonest so they don't go to waste.
-2. Uses as many of the listed ingredients as possible.
-3. Is a realistic, complete meal (not just a snack).
+PANTRY INGREDIENTS:
+${pantryLines}
 
 Respond ONLY with valid JSON in this exact schema (no markdown, no backticks, just raw JSON):
 {
@@ -34,15 +31,66 @@ Respond ONLY with valid JSON in this exact schema (no markdown, no backticks, ju
   "directions": ["Preheat oven to 375°F.", "Dice the chicken into 1-inch cubes.", ...]
 }
 
-Keep directions clear and beginner-friendly. Include cooking temps in °F, specific quantities, and timing for each step.`;
+function parseRecipeResponse(raw: string): Recipe {
+  const cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(cleaned) as Recipe;
+    if (!parsed.name || !Array.isArray(parsed.directions)) {
+      throw new Error("Invalid shape");
+    }
+    return {
+      name: String(parsed.name),
+      prepTime: String(parsed.prepTime ?? "—"),
+      servings: String(parsed.servings ?? "—"),
+      ingredientsFromPantry: Array.isArray(parsed.ingredientsFromPantry)
+        ? parsed.ingredientsFromPantry.map((i: RecipeIngredient) => ({
+            name: String(i?.name ?? ""),
+            quantity: i?.quantity != null ? String(i.quantity) : undefined,
+            note: i?.note != null ? String(i.note) : undefined,
+          }))
+        : [],
+      ingredientsToBuy: Array.isArray(parsed.ingredientsToBuy)
+        ? parsed.ingredientsToBuy.map((i: RecipeIngredient) => ({
+            name: String(i?.name ?? ""),
+            quantity: i?.quantity != null ? String(i.quantity) : undefined,
+            note: i?.note != null ? String(i.note) : undefined,
+          }))
+        : [],
+      directions: parsed.directions.map((s: unknown) => String(s ?? "")),
+    };
+  } catch {
+    return {
+      name: "Generated Recipe",
+      prepTime: "—",
+      servings: "—",
+      ingredientsFromPantry: [],
+      ingredientsToBuy: [],
+      directions: [raw],
+    };
+  }
 }
 
 export async function generateRecipes(): Promise<Recipe[]> {
     const items = await getAllItems();
     const allIngredientsFormatted = createIngredientsList(items);
 
-    const prompt = createRecipePrompt(allIngredientsFormatted);
-    const response = await askChat(prompt);
+  if (pantryLines.trim().length === 0) {
+    return [
+      {
+        name: "Add ingredients first",
+        prepTime: "—",
+        servings: "—",
+        ingredientsFromPantry: [],
+        ingredientsToBuy: [],
+        directions: [
+          "You don't have any items in your pantry yet. Add ingredients in My Pantry or scan a receipt, then come back to generate a recipe that uses what you have.",
+        ],
+      },
+    ];
+  }
 
     try {
         // Strip markdown fences if the model wraps it

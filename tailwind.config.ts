@@ -2,6 +2,9 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
+  safelist: [
+    'bg-green-600', 'bg-green-700', 'text-green-600', 'text-green-500', 'text-green-400', 'border-green-200', 'border-green-300', 'from-green-600', 'to-green-700', 'shadow-green-900/20', 'hover:bg-green-700', 'hover:bg-green-50', 'bg-emerald-50', 'border-emerald-100', 'text-emerald-700', 'text-emerald-600', 'bg-green-50',
+  ],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",

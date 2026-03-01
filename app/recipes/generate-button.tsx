@@ -7,28 +7,38 @@ import { Clock3, Users, ChefHat } from "lucide-react";
 export default function GenerateButton() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
     setLoading(true);
+    setError(null);
+    setRecipes([]);
     try {
       const result = await generateRecipes();
       setRecipes(result);
     } catch (err) {
-      console.error("Failed to generate recipes:", err);
+      console.error("Failed to generate recipe:", err);
+      setError("Couldn't generate a recipe. Check your pantry has items and try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <button
         onClick={handleClick}
         disabled={loading}
-        className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white hover:bg-green-700 transition shadow-sm disabled:opacity-60 disabled:cursor-wait"
       >
         {loading ? "Generating..." : "Generate Recipe"}
       </button>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {error}
+        </div>
+      )}
 
       {recipes.length > 0 && (
         <div className="mt-8 space-y-6 text-left">
