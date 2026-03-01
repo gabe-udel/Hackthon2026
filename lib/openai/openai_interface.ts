@@ -35,14 +35,15 @@ Analyze this receipt image and extract every food/grocery item. For each item, p
 1. Item name (clean, human-readable)
 2. Category (EXACTLY one of: protein, carb, dairy, fruit, vegetable, other)
 3. Estimated expiration date (YYYY-MM-DD format, based on typical shelf life from today)
+4. Price (the price shown on the receipt for that item, as a decimal number like 3.99; use 0 if not visible)
 
 Respond ONLY in CSV format with NO header row. Each line should be:
-item_name,category,expiration_date
+item_name,category,expiration_date,price
 
 Example:
-Whole Milk,dairy,2026-03-10
-Chicken Breast,protein,2026-03-03
-Bananas,fruit,2026-03-05
+Whole Milk,dairy,2026-03-10,4.29
+Chicken Breast,protein,2026-03-03,7.99
+Bananas,fruit,2026-03-05,1.49
 
 Do not include non-food items (bags, tax, etc). Do not include any explanation, just the CSV lines.`,
                     },

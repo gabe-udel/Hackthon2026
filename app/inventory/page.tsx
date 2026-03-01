@@ -11,6 +11,7 @@ type InventoryItem = {
   quantity: string;
   expiration_date: string;
   created_at: string;
+  price: number;
 };
 
 // sortBy indices: 0 = expiration_date, 1 = category, 2 = name, 3 = created_at
@@ -27,6 +28,7 @@ export default function InventoryPage() {
   const [newCategory, setNewCategory] = useState("");
   const [newQuantity, setNewQuantity] = useState("");
   const [newExpiry, setNewExpiry] = useState("");
+  const [newPrice, setNewPrice] = useState("");
 
   // Edit expiry state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,11 +64,12 @@ export default function InventoryPage() {
     e.preventDefault();
     if (!newName || !newCategory || !newQuantity || !newExpiry) return;
     try {
-      await addItem(newName, newCategory, newQuantity, newExpiry, new Date().toISOString());
+      await addItem(newName, newCategory, newQuantity, newExpiry, new Date().toISOString(), newPrice || "0");
       setNewName("");
       setNewCategory("");
       setNewQuantity("");
       setNewExpiry("");
+      setNewPrice("");
       setShowAddForm(false);
       await fetchItems();
     } catch (err) {
@@ -190,6 +193,18 @@ export default function InventoryPage() {
               required
             />
           </div>
+          <div className="flex flex-col">
+            <label className="text-xs font-medium text-slate-500 mb-1">Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              placeholder="e.g. 3.99"
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-24 text-slate-800"
+            />
+          </div>
           <button
             type="submit"
             className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
@@ -218,6 +233,7 @@ export default function InventoryPage() {
                   Category {sortColumn === 1 ? (ascending ? "↑" : "↓") : ""}
                 </th>
                 <th className="px-4 py-3">Quantity</th>
+                <th className="px-4 py-3">Price</th>
                 <th className="px-4 py-3 cursor-pointer select-none hover:text-slate-900" onClick={() => handleSort(0)}>
                   Days Until Expiry {sortColumn === 0 ? (ascending ? "↑" : "↓") : ""}
                 </th>
@@ -233,6 +249,7 @@ export default function InventoryPage() {
                   <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 text-slate-600">{item.category}</td>
                   <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
+                  <td className="px-4 py-3 text-slate-600">${(item.price ?? 0).toFixed(2)}</td>
                   <td className={`px-4 py-3 ${expiryInfo(item.expiration_date).color}`}>
                     {editingId === item.id ? (
                       <div className="flex items-center gap-2">

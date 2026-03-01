@@ -9,6 +9,7 @@
  *   category       (text)
  *   quantity       (text)
  *   expiration_date (date)
+ *   price          (numeric)      - item price
  *   created_at     (timestamptz)  - auto-generated
  */
 
@@ -54,10 +55,11 @@ export async function removeItem(name: string, createdAt: string) {
  * @param quantity       - Quantity as text (e.g. "5").
  * @param expirationDate - Expiration date string (e.g. "2026-03-10").
  * @param createdAt      - Creation timestamp string.
+ * @param price          - Item price as a string (e.g. "3.99"). Defaults to "0".
  */
-export async function addItem(name: string, category: string, quantity: string, expirationDate: string, createdAt: string) {
+export async function addItem(name: string, category: string, quantity: string, expirationDate: string, createdAt: string, price: string = "0") {
     const { error } = await supabase.from("inventory").insert([
-        { name, category, quantity, expiration_date: expirationDate, created_at: createdAt }
+        { name, category, quantity, expiration_date: expirationDate, created_at: createdAt, price: parseFloat(price) || 0 }
     ]);
     if (error) throw error;
 }

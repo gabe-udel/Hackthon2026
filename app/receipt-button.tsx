@@ -9,6 +9,7 @@ type ParsedEntry = {
   name: string;
   category: string;
   expiration_date: string;
+  price: string;
 };
 
 function parseCSV(csv: string): ParsedEntry[] {
@@ -18,8 +19,8 @@ function parseCSV(csv: string): ParsedEntry[] {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("item_name"))
     .map((line) => {
-      const [name, category, expiration_date] = line.split(",").map((s) => s.trim());
-      return { name, category, expiration_date };
+      const [name, category, expiration_date, price] = line.split(",").map((s) => s.trim());
+      return { name, category, expiration_date, price: price || "0" };
     })
     .filter((e) => e.name && e.category && e.expiration_date);
 }
@@ -84,13 +85,14 @@ export default function ReceiptButton() {
     setSaving(true);
     try {
       for (const entry of entries) {
-        await addItem(entry.name, entry.category, "1", entry.expiration_date, new Date().toISOString());
+        await addItem(entry.name, entry.category, "1", entry.expiration_date, new Date().toISOString(), entry.price);
       }
       setSaved(true);
       setTimeout(resetState, 1500);
     } catch (err: unknown) {
-      console.error("Failed to save items:", err);
-      setError(err instanceof Error ? err.message : "Failed to save items");
+      console.error("Failed to save items:", JSON.stringify(err));
+      const msg = (err && typeof err === "object" && "message" in err) ? String((err as {message: string}).message) : "Failed to save items";
+      setError(msg);
       setSaving(false);
     }
   }
@@ -147,6 +149,7 @@ export default function ReceiptButton() {
                   <tr>
                     <th className="py-2 text-left">Item</th>
                     <th className="py-2 text-left">Category</th>
+                    <th className="py-2 text-left">Price</th>
                     <th className="py-2 text-left">Expires</th>
                   </tr>
                 </thead>
@@ -155,6 +158,7 @@ export default function ReceiptButton() {
                     <tr key={i} className="text-slate-700">
                       <td className="py-2 font-medium">{entry.name}</td>
                       <td className="py-2 capitalize text-slate-500">{entry.category}</td>
+                      <td className="py-2 text-slate-500">${entry.price}</td>
                       <td className="py-2 text-slate-500">{entry.expiration_date}</td>
                     </tr>
                   ))}
