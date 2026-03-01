@@ -214,7 +214,8 @@ export async function logPartialUsage(itemId: string, amountUsed: number, action
 
   const supabase = createClient();
 
-  const { error } = await supabase.rpc("log_partial_usage", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc("log_partial_usage", {
     p_item_id: itemId,
     p_amount_used: amountUsed,
     p_action_type: actionType,
