@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight, Skull } from "lucide-react";
+import { Utensils, TrendingUp, AlertTriangle, Clock3, Wallet, ChevronRight, Skull, Droplets } from "lucide-react";
 import { getSoonToExpireItems, getAllItems, getExpiredItems, type InventoryItemRecord } from "@/lib/supabase/interface";
 import { ShieldCheck } from "lucide-react";
 import ReceiptButton from "./receipt-button";
@@ -62,11 +62,31 @@ export default function Dashboard() {
     return Math.round((freshCount / allItems.length) * 100);
   }, [allItems, todayMidnightMs]);
 
-  // Fun equivalence: what could you "save" by using soon-to-expire items?
-  const mealsEquivalent = useMemo(() => {
-    const avgMealCost = 12; // average cost of eating out
-    return Math.max(Math.round(cashAtRisk / avgMealCost), 0);
-  }, [cashAtRisk]);
+  // CO₂ impact: estimate lbs of CO₂ that could be saved by using soon-to-expire items.
+  // EPA estimates ~3.8 lbs CO₂e per lb of food wasted (production + landfill methane).
+  // We convert each item's quantity to grams via standard_unit + conversion_factor,
+  // then to lbs, then multiply by the emissions factor.
+  const co2Saved = useMemo(() => {
+    const CO2_PER_LB = 3.8;
+    const GRAMS_PER_LB = 453.592;
+    let totalGrams = 0;
+    for (const item of soonItems) {
+      const qty = item.current_quantity ?? 0;
+      const factor = item.conversion_factor ?? 1;
+      const unit = item.standard_unit;
+      if (unit === "g") {
+        totalGrams += qty * factor;
+      } else if (unit === "ml") {
+        // rough 1ml ≈ 1g for most foods
+        totalGrams += qty * factor;
+      } else {
+        // count-based: estimate ~150g per item (avg fruit/vegetable)
+        totalGrams += qty * 150;
+      }
+    }
+    const lbs = totalGrams / GRAMS_PER_LB;
+    return Math.round(lbs * CO2_PER_LB * 10) / 10;
+  }, [soonItems]);
 
   function daysUntil(dateStr: string | null) {
     if (todayMidnightMs === null || !dateStr) return null;
@@ -96,15 +116,15 @@ export default function Dashboard() {
       
       {/* 1. TOP SECTION: THE BIG STATS (BENTO STYLE) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* MEALS SAVED CARD */}
+        {/* CO₂ IMPACT CARD */}
         <div className="bg-green-600 text-white p-6 rounded-[2rem] shadow-lg shadow-green-900/20 flex flex-col justify-between aspect-square md:aspect-auto min-h-[160px]">
           <div className="flex justify-between items-start">
-            <Leaf className="w-6 h-6 opacity-80" />
-            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Use It Up</span>
+            <Droplets className="w-6 h-6 opacity-80" />
+            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Eco Impact</span>
           </div>
           <div>
-            <p className="text-4xl font-black italic">{mealsEquivalent}<span className="text-lg ml-1 font-normal opacity-70">{mealsEquivalent === 1 ? 'meal' : 'meals'}</span></p>
-            <p className="text-xs font-medium opacity-80">Worth of dining out — cook your expiring items instead!</p>
+            <p className="text-4xl font-black italic">{co2Saved}<span className="text-lg ml-1 font-normal opacity-70">lbs CO₂</span></p>
+            <p className="text-xs font-medium opacity-80">Could be saved by using your expiring items instead of wasting them</p>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import './globals.css';
 import Link from 'next/link';
-import { User, Leaf } from 'lucide-react';
+import { User } from 'lucide-react';
+import SidebarNav from '@/components/sidebar-nav';
 
 export default function RootLayout({
   children,
@@ -13,25 +14,12 @@ export default function RootLayout({
         
         {/* 1. SIDEBAR (The Navigation "Nerve Center") */}
         <aside className="w-64 bg-white border-r flex flex-col p-6 sticky top-0 h-screen">
-          <div className="text-2xl font-extrabold text-green-600 mb-10 tracking-tight">
+          <div className="flex items-center gap-1 text-5xl font-black text-green-600 mb-10 tracking-tight">
             Savor
+            <img src="/savorLogo.png" alt="Savor" className="w-12 h-12 rounded-lg -my-2" />
           </div>
           
-          <nav className="flex flex-col space-y-2 flex-1">
-            <Link href="/" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium">
-              Dashboard
-            </Link>
-            <Link href="/inventory" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium">
-              My Pantry
-            </Link>
-            <Link href="/recipes" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium">
-              AI Recipes
-            </Link>
-            <Link href="/sustainability" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium flex items-center gap-2">
-              <Leaf className="w-4 h-4 text-green-500" />
-              Sustainability
-            </Link>
-          </nav>
+          <SidebarNav />
 
           <div className="py-6 border-t border-b space-y-4">
             <Link href="/user" className="flex items-center gap-3 p-3 hover:bg-green-50 rounded-lg transition-colors font-medium text-slate-700 hover:text-green-700">
@@ -41,7 +29,7 @@ export default function RootLayout({
           </div>
 
           <div className="pt-6 border-t text-xs text-slate-400">
-            Hackathon 2026 • Abby & Team
+            Hackathon 2026
           </div>
         </aside>
 
