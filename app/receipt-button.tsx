@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { getReciptEntries } from "@/lib/openai/openai_interface";
 import { addItem, type StandardUnit } from "@/lib/supabase/interface";
-import { UploadCloud, Check, X } from "lucide-react";
+import { UploadCloud, Camera, Check, X } from "lucide-react";
 
 type ParsedEntry = {
   name: string;
@@ -48,40 +48,86 @@ export default function ReceiptButton() {
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<ParsedEntry[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   function handleClick() {
+    setShowPicker(true);
+  }
+
+  function handleUpload() {
+    setShowPicker(false);
     fileInputRef.current?.click();
+  }
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  }, []);
+
+  async function handleCamera() {
+    setShowPicker(false);
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      streamRef.current = stream;
+      setShowCamera(true);
+      // Wait for the video element to mount, then attach the stream
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
+    } catch {
+      setError("Camera access denied or not available.");
+    }
+  }
+
+  async function handleSnap() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+
+    const base64 = canvas.toDataURL("image/jpeg", 0.85);
+    stopCamera();
+    await processBase64(base64);
   }
 
   function resetState() {
     setShowModal(false);
+    setShowPicker(false);
+    stopCamera();
     setEntries([]);
     setSaved(false);
     setSaving(false);
     setError(null);
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function processBase64(base64: string) {
     setLoading(true);
     setError(null);
     setEntries([]);
     setSaved(false);
 
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
       const csv = await getReciptEntries(base64);
       const parsed = parseCSV(csv);
 
@@ -96,6 +142,25 @@ export default function ReceiptButton() {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await processBase64(base64);
+    } catch (err: unknown) {
+      console.error("Failed to read file:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
@@ -134,6 +199,7 @@ export default function ReceiptButton() {
           className="hidden"
           onChange={handleFileChange}
         />
+        <canvas ref={canvasRef} className="hidden" />
 
         <button
           onClick={handleClick}
@@ -149,10 +215,71 @@ export default function ReceiptButton() {
           <span className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by GPT-4o Vision</span>
         </button>
 
-        {error && !showModal && (
+        {error && !showModal && !showPicker && (
           <p className="mt-3 text-red-500 text-xs font-medium">{error}</p>
         )}
       </div>
+
+      {/* Camera Viewfinder Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
+          <div className="relative w-full max-w-lg flex-1 flex items-center justify-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex items-center gap-6 py-6 bg-black">
+            <button
+              onClick={stopCamera}
+              className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <button
+              onClick={handleSnap}
+              className="w-16 h-16 rounded-full bg-white border-4 border-green-500 hover:scale-105 transition-transform active:scale-95"
+              aria-label="Take photo"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Source Picker Modal */}
+      {showPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowPicker(false)}>
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-xs mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h2 className="text-lg font-black text-slate-900">Scan Receipt</h2>
+              <button onClick={() => setShowPicker(false)} className="text-slate-400 hover:text-slate-600 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 pb-6 flex flex-col gap-3">
+              <button
+                onClick={handleCamera}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition active:scale-95"
+              >
+                <Camera className="w-5 h-5" />
+                Take Photo
+              </button>
+              <button
+                onClick={handleUpload}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm transition active:scale-95"
+              >
+                <UploadCloud className="w-5 h-5" />
+                Upload Image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Overlay */}
       {showModal && (
