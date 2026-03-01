@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginSuccessPage() {
   const [name, setName] = useState<string | null>(null);
@@ -28,7 +29,15 @@ export default function LoginSuccessPage() {
   return (
     <div className="max-w-md mx-auto mt-24 text-center">
       <h1 className="text-2xl font-bold mb-4">Login successful</h1>
-      <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4" />
+      <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden">
+        <Image
+          src="/hen.png"
+          alt="User avatar"
+          width={96}
+          height={96}
+          className="w-full h-full object-cover"
+        />
+      </div>
       {name && <p className="text-lg font-semibold mb-6">{name}</p>}
       <button
         onClick={handleLogout}
