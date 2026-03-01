@@ -212,7 +212,7 @@ export default function ReceiptButton() {
           <span className="text-sm font-bold text-slate-800">
             {loading ? "Analyzing..." : "Scan Receipt"}
           </span>
-          <span className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by GPT-4o Vision</span>
+          <span className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by Gemini</span>
         </button>
 
         {error && !showModal && !showPicker && (
