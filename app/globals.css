@@ -66,3 +66,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Ensure green UI stays green (fallback if Tailwind purges) */
+@layer components {
+  .savor-green-card {
+    background: linear-gradient(to bottom right, #16a34a, #15803d) !important;
+    color: white !important;
+  }
+  .savor-green-challenge {
+    background: linear-gradient(to bottom right, #16a34a, #047857) !important;
+    color: white !important;
+  }
+  .savor-emerald-tip {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+  }
+  .savor-emerald-tip .savor-emerald-text {
+    color: #047857;
+  }
+}

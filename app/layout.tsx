@@ -13,7 +13,7 @@ export default function RootLayout({
         
         {/* 1. SIDEBAR (The Navigation "Nerve Center") */}
         <aside className="w-64 bg-white border-r flex flex-col p-6 sticky top-0 h-screen">
-          <div className="text-2xl font-extrabold text-green-600 mb-10 tracking-tight">
+          <div className="text-2xl font-extrabold mb-10 tracking-tight" style={{ color: '#16a34a' }}>
             Savor
           </div>
           

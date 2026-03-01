@@ -65,13 +65,13 @@ export default function SustainabilityPage() {
       </header>
 
       {/* This week's challenge */}
-      <section className="bg-gradient-to-br from-green-600 to-emerald-700 text-white p-8 rounded-[2rem] shadow-xl shadow-green-900/20">
+      <section className="savor-green-challenge bg-gradient-to-br from-green-600 to-emerald-700 p-8 rounded-[2rem] shadow-xl shadow-green-900/20">
         <div className="flex items-center gap-2 mb-3">
-          <Target className="w-5 h-5 opacity-90" />
-          <h2 className="text-sm font-black uppercase tracking-widest opacity-90">This week’s challenge</h2>
+          <Target className="w-5 h-5 opacity-90 text-white" />
+          <h2 className="text-sm font-black uppercase tracking-widest text-white/90">This week’s challenge</h2>
         </div>
-        <h3 className="text-xl font-bold mb-2">Use everything on your Use First list</h3>
-        <p className="text-sm opacity-90 mb-6">
+        <h3 className="text-xl font-bold mb-2 text-white">Use everything on your Use First list</h3>
+        <p className="text-sm text-white/90 mb-6">
           Check your dashboard and plan at least one meal around items expiring in the next 3 days. Every item you use is less waste and fewer emissions.
         </p>
         <Link

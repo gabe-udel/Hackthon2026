@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight, Sparkles, ScanLine } from "lucide-react";
+import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight, Sparkles, ScanLine, Trash2 } from "lucide-react";
 import { getSoonToExpireItems, getAllItems, type InventoryItemRecord } from "@/lib/supabase/interface";
 import { ShieldCheck } from "lucide-react";
 import ReceiptButton from "./receipt-button";
@@ -40,14 +40,20 @@ function getCategoryEmoji(category: string | null): string {
   return "🍽️";
 }
 
+const DEFAULT_GREETING = { line: "Hello", sub: "Check what to use first from your pantry." };
+
 export default function Dashboard() {
   const [soonItems, setSoonItems] = useState<InventoryItemRecord[]>([]);
   const [allItems, setAllItems] = useState<InventoryItemRecord[]>([]);
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
+  const [greeting, setGreeting] = useState(DEFAULT_GREETING);
+  const [tipOfTheDay, setTipOfTheDay] = useState(SUSTAINABILITY_TIPS[0]);
 
-  const greeting = useMemo(() => getGreeting(), []);
-  const tipOfTheDay = useMemo(() => SUSTAINABILITY_TIPS[new Date().getDate() % SUSTAINABILITY_TIPS.length], []);
+  useEffect(() => {
+    setGreeting(getGreeting());
+    setTipOfTheDay(SUSTAINABILITY_TIPS[new Date().getDate() % SUSTAINABILITY_TIPS.length]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -103,6 +109,22 @@ export default function Dashboard() {
     return { count: n, line: `${n} items to use`, sub: `Using them this week keeps food out of landfills and cuts unnecessary emissions.` };
   }, [soonItems.length]);
 
+  // Expired items (past expiration date) for bottom "total waste" bar
+  const expiredItems = useMemo(() => {
+    if (todayMidnightMs === null) return [];
+    return allItems.filter((item) => {
+      if (!item.expiration_date) return false;
+      const exp = new Date(item.expiration_date);
+      exp.setHours(0, 0, 0, 0);
+      return exp.getTime() < todayMidnightMs;
+    });
+  }, [allItems, todayMidnightMs]);
+
+  const totalWasteValue = useMemo(
+    () => expiredItems.reduce((sum, i) => sum + (i.price ?? 0), 0),
+    [expiredItems]
+  );
+
   function daysUntil(dateStr: string | null) {
     if (todayMidnightMs === null || !dateStr) return null;
     const expiry = new Date(dateStr);
@@ -141,10 +163,10 @@ export default function Dashboard() {
       </div>
 
       {/* Sustainability tip of the day */}
-      <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+      <div className="savor-emerald-tip flex items-start gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
         <span className="text-2xl flex-shrink-0" aria-hidden>{tipOfTheDay.icon}</span>
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Today’s sustainability tip</p>
+          <p className="savor-emerald-text text-xs font-bold uppercase tracking-wider text-emerald-700">Today’s sustainability tip</p>
           <p className="text-sm text-slate-700 mt-0.5">{tipOfTheDay.text}</p>
         </div>
         <Link href="/sustainability" className="flex-shrink-0 text-xs font-semibold text-emerald-600 hover:underline">
@@ -155,14 +177,14 @@ export default function Dashboard() {
       {/* 1. TOP SECTION: THE BIG STATS (BENTO STYLE) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* USE-FIRST SPOTLIGHT CARD */}
-        <div className="bg-gradient-to-br from-green-600 to-green-700 text-white p-6 rounded-[2rem] shadow-lg shadow-green-900/20 flex flex-col justify-between aspect-square md:aspect-auto min-h-[160px] transition hover:shadow-xl hover:shadow-green-900/25">
+        <div className="savor-green-card bg-gradient-to-br from-green-600 to-green-700 text-white p-6 rounded-[2rem] shadow-lg shadow-green-900/20 flex flex-col justify-between aspect-square md:aspect-auto min-h-[160px] transition hover:shadow-xl hover:shadow-green-900/25">
           <div className="flex justify-between items-start">
             <Leaf className="w-6 h-6 opacity-80" />
             <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Use It Up</span>
           </div>
           <div>
-            <p className="text-4xl font-black italic">{useFirstHighlight.line}</p>
-            <p className="text-xs font-medium opacity-80 mt-1">{useFirstHighlight.sub}</p>
+            <p className="text-4xl font-black italic text-white">{useFirstHighlight.line}</p>
+            <p className="text-xs font-medium opacity-90 mt-1 text-white/90">{useFirstHighlight.sub}</p>
           </div>
         </div>
 
@@ -319,6 +341,34 @@ export default function Dashboard() {
             </div>
           </div>
         </aside>
+      </div>
+
+      {/* Expired items bar at bottom / Total waste */}
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-slate-600">
+          <Trash2 className="w-4 h-4 text-slate-400 shrink-0" />
+          <span className="text-sm font-medium">Expired items</span>
+          {expiredItems.length > 0 ? (
+            <span className="text-slate-500 text-sm">
+              {expiredItems.length} item{expiredItems.length !== 1 ? "s" : ""}
+              <span className="ml-1.5">
+                ({expiredItems.slice(0, 5).map((i) => toTitleCase(i.name)).join(", ")}
+                {expiredItems.length > 5 ? ` +${expiredItems.length - 5} more` : ""})
+              </span>
+            </span>
+          ) : (
+            <span className="text-slate-400 text-sm">None</span>
+          )}
+          {expiredItems.length > 0 && (
+            <Link href="/inventory" className="text-xs font-semibold text-green-600 hover:underline ml-1">
+              Manage in Pantry →
+            </Link>
+          )}
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-slate-500 font-medium">Total waste</span>
+          <span className="font-bold text-slate-800">${totalWasteValue.toFixed(2)}</span>
+        </div>
       </div>
     </div>
   );
