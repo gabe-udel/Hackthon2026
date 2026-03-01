@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
-import { getSoonToExpireItems } from "@/lib/supabase/interface";
+import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
+import { getSoonToExpireItems, getAllItems } from "@/lib/supabase/interface";
+import { ShieldCheck } from "lucide-react";
+import ReceiptButton from "./receipt-button";
 
 type InventoryItem = {
   id: string;
@@ -16,6 +18,7 @@ type InventoryItem = {
 
 export default function Dashboard() {
   const [soonItems, setSoonItems] = useState<InventoryItem[]>([]);
+  const [allItems, setAllItems] = useState<InventoryItem[]>([]);
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
 
@@ -25,11 +28,17 @@ export default function Dashboard() {
     d.setHours(0, 0, 0, 0);
     setTodayMidnightMs(d.getTime());
 
-    async function fetchSoonItems() {
+    async function fetchItems() {
       setLoadingSoon(true);
       try {
-        const data = await getSoonToExpireItems(5);
-        if (isMounted) setSoonItems((data ?? []) as InventoryItem[]);
+        const [soonData, allData] = await Promise.all([
+          getSoonToExpireItems(5),
+          getAllItems(),
+        ]);
+        if (isMounted) {
+          setSoonItems((soonData ?? []) as InventoryItem[]);
+          setAllItems((allData ?? []) as InventoryItem[]);
+        }
       } catch (err) {
         console.error("Failed to fetch items:", err);
       } finally {
@@ -37,7 +46,7 @@ export default function Dashboard() {
       }
     }
 
-    fetchSoonItems();
+    fetchItems();
     return () => { isMounted = false; };
   }, []);
 
@@ -45,6 +54,18 @@ export default function Dashboard() {
   const cashAtRisk = useMemo(() => {
     return soonItems.reduce((acc, item) => acc + (item.price || 0), 0);
   }, [soonItems]);
+
+  // Freshness indicator: % of items NOT expiring within 3 days
+  const freshnessPct = useMemo(() => {
+    if (allItems.length === 0 || todayMidnightMs === null) return 100;
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    const freshCount = allItems.filter((item) => {
+      const exp = new Date(item.expiration_date);
+      exp.setHours(0, 0, 0, 0);
+      return exp.getTime() - todayMidnightMs > threeDaysMs;
+    }).length;
+    return Math.round((freshCount / allItems.length) * 100);
+  }, [allItems, todayMidnightMs]);
 
   function daysUntil(dateStr: string) {
     if (todayMidnightMs === null) return null;
@@ -89,10 +110,8 @@ export default function Dashboard() {
         </div>
 
         {/* SCAN ACTION CARD */}
-        <section className="bg-white border-2 border-dashed border-green-200 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-all cursor-pointer group">
-          <UploadCloud className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" />
-          <h2 className="text-sm font-bold mt-2">Scan Receipt</h2>
-          <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by GPT-4o Vision</p>
+        <section className="bg-white border-2 border-dashed border-green-200 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-all group">
+          <ReceiptButton />
         </section>
       </div>
 
@@ -154,9 +173,26 @@ export default function Dashboard() {
             <p className="text-sm text-slate-300 leading-relaxed italic mb-6 relative z-10">
               "Based on your expiring {soonItems[0]?.name || 'items'}, I recommend making a quick frittata to save ${cashAtRisk.toFixed(0)}."
             </p>
-            <button className="w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10">
+            <Link href="/recipes" className="block w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10 text-center">
               Generate Recipe
-            </button>
+            </Link>
+          </div>
+
+          {/* FRESHNESS INDICATOR CARD */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-green-500" /> Freshness Indicator
+            </h2>
+            <p className="text-4xl font-black text-slate-900 mb-1">{freshnessPct}%</p>
+            <p className="text-xs text-slate-500 mb-4">of items are fresh (&gt;3 days until expiry)</p>
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${
+                  freshnessPct >= 70 ? 'bg-green-500' : freshnessPct >= 40 ? 'bg-amber-400' : 'bg-red-500'
+                }`}
+                style={{ width: `${freshnessPct}%` }}
+              />
+            </div>
           </div>
 
           {/* QUICK ANALYTICS CARD */}
