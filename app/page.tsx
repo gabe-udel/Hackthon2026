@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
 import { getSoonToExpireItems } from "@/lib/supabase/interface";
+import ReceiptButton from "./receipt-button";
 
 type InventoryItem = {
   id: string;
@@ -89,10 +90,8 @@ export default function Dashboard() {
         </div>
 
         {/* SCAN ACTION CARD */}
-        <section className="bg-white border-2 border-dashed border-green-200 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-all cursor-pointer group">
-          <UploadCloud className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" />
-          <h2 className="text-sm font-bold mt-2">Scan Receipt</h2>
-          <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by GPT-4o Vision</p>
+        <section className="bg-white border-2 border-dashed border-green-200 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-all group">
+          <ReceiptButton />
         </section>
       </div>
 
