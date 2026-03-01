@@ -1,6 +1,6 @@
 import './globals.css';
 import Link from 'next/link';
-import { User } from 'lucide-react';
+import { User, Leaf } from 'lucide-react';
 
 export default function RootLayout({
   children,
@@ -26,6 +26,10 @@ export default function RootLayout({
             </Link>
             <Link href="/recipes" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium">
               AI Recipes
+            </Link>
+            <Link href="/sustainability" className="p-3 hover:bg-green-50 rounded-lg transition-colors font-medium flex items-center gap-2">
+              <Leaf className="w-4 h-4 text-green-500" />
+              Sustainability
             </Link>
           </nav>
 
