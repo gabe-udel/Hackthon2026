@@ -96,6 +96,18 @@ export async function updateExpiry(id: string, newExpirationDate: string) {
   if (error) throw error;
 }
 
+/**
+ * Updates the current quantity of an inventory item.
+ */
+export async function updateQuantity(id: string, newQuantity: number) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("inventory")
+    .update({ current_quantity: newQuantity })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 function inferConversionFactor(userUnit: string, standardUnit: StandardUnit): number {
   const u = userUnit.trim().toLowerCase();
 

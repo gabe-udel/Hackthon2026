@@ -6,8 +6,7 @@ import {
   addItem,
   removeItem,
   updateExpiry,
-  logPartialUsage,
-  type ActionType,
+  updateQuantity,
   type InventoryItemRecord,
   type StandardUnit,
 } from "@/lib/supabase/interface";
@@ -91,10 +90,8 @@ export default function InventoryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editExpiry, setEditExpiry] = useState("");
 
-  const [usageAmountById, setUsageAmountById] = useState<Record<string, string>>({});
-  const [usageActionById, setUsageActionById] = useState<Record<string, ActionType>>({});
-  const [usageErrorById, setUsageErrorById] = useState<Record<string, string>>({});
-  const [savingUsageId, setSavingUsageId] = useState<string | null>(null);
+  const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState("");
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -211,32 +208,16 @@ export default function InventoryPage() {
     }
   }
 
-  async function handleLogUsage(item: InventoryItemRecord) {
-    const rawAmount = usageAmountById[item.id] ?? "";
-    const actionType = usageActionById[item.id] ?? "consumed";
-    const amount = Number(rawAmount);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setUsageErrorById((prev) => ({ ...prev, [item.id]: "Enter a valid amount > 0." }));
-      return;
-    }
-
-    setUsageErrorById((prev) => ({ ...prev, [item.id]: "" }));
-
+  async function handleUpdateQuantity(item: InventoryItemRecord) {
+    const qty = Number(editQty);
+    if (!Number.isFinite(qty) || qty < 0) return;
     try {
-      setSavingUsageId(item.id);
-      await logPartialUsage(item.id, amount, actionType);
-      setUsageAmountById((prev) => ({ ...prev, [item.id]: "" }));
+      await updateQuantity(item.id, qty);
+      setEditingQtyId(null);
+      setEditQty("");
       await fetchItems();
     } catch (err) {
-      console.error("Failed to log usage:", err);
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: unknown }).message ?? "Failed to log usage")
-          : "Failed to log usage";
-      setUsageErrorById((prev) => ({ ...prev, [item.id]: message }));
-    } finally {
-      setSavingUsageId(null);
+      console.error("Failed to update quantity:", err);
     }
   }
 
@@ -434,7 +415,7 @@ export default function InventoryPage() {
                 >
                   Added {sortColumn === 3 ? (ascending ? "↑" : "↓") : ""}
                 </th>
-                <th className="px-4 py-3">Actions</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -443,7 +424,47 @@ export default function InventoryPage() {
                   <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 text-slate-600">{item.category ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {formatAmount(item.current_quantity, item.user_unit)}
+                    {editingQtyId === item.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-slate-800"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleUpdateQuantity(item);
+                            if (e.key === "Escape") { setEditingQtyId(null); setEditQty(""); }
+                          }}
+                        />
+                        <span className="text-xs text-slate-400">{item.user_unit ?? ""}</span>
+                        <button
+                          onClick={() => handleUpdateQuantity(item)}
+                          className="text-xs font-medium text-green-600 hover:text-green-800"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setEditingQtyId(null); setEditQty(""); }}
+                          className="text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className="cursor-pointer hover:underline"
+                        onClick={() => {
+                          setEditingQtyId(item.id);
+                          setEditQty(String(item.current_quantity ?? 0));
+                        }}
+                        title="Click to edit quantity"
+                      >
+                        {formatAmount(item.current_quantity, item.user_unit)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {item.price == null ? "—" : `$${Number(item.price).toFixed(2)}`}
@@ -490,52 +511,12 @@ export default function InventoryPage() {
                     {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={usageAmountById[item.id] ?? ""}
-                          onChange={(e) =>
-                            setUsageAmountById((prev) => ({ ...prev, [item.id]: e.target.value }))
-                          }
-                          placeholder="Used"
-                          className="w-20 rounded border border-slate-300 px-2 py-1 text-xs text-slate-800"
-                        />
-                        <select
-                          value={usageActionById[item.id] ?? "consumed"}
-                          onChange={(e) =>
-                            setUsageActionById((prev) => ({
-                              ...prev,
-                              [item.id]: e.target.value as ActionType,
-                            }))
-                          }
-                          className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700"
-                        >
-                          <option value="consumed">Consumed</option>
-                          <option value="spoiled">Spoiled</option>
-                          <option value="adjusted">Adjusted</option>
-                          <option value="added">Added</option>
-                        </select>
-                        <button
-                          onClick={() => handleLogUsage(item)}
-                          disabled={savingUsageId === item.id}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                        >
-                          {savingUsageId === item.id ? "Saving..." : "Use Food"}
-                        </button>
-                      </div>
-                      {usageErrorById[item.id] && (
-                        <p className="text-xs text-red-600">{usageErrorById[item.id]}</p>
-                      )}
-                      <button
-                        onClick={() => handleRemove(item)}
-                        className="w-fit text-xs font-medium text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleRemove(item)}
+                      className="text-xs font-medium text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
                   </td>
                 </tr>
               ))}
