@@ -15,8 +15,8 @@ export default function RootLayout({
         {/* 1. SIDEBAR (The Navigation "Nerve Center") */}
         <aside className="w-64 bg-white border-r flex flex-col p-6 sticky top-0 h-screen">
           <div className="flex items-center gap-1 text-5xl font-black text-green-600 mb-10 tracking-tight">
-            Savor
             <img src="/savorLogo.png" alt="Savor" className="w-12 h-12 rounded-lg -my-2" />
+            Savor
           </div>
           
           <SidebarNav />
