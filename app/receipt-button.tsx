@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { getReciptEntries } from "@/lib/openai/openai_interface";
+import { getReceiptEntries } from "@/lib/gemini/gemini_interface";
 import { addItem, type StandardUnit } from "@/lib/supabase/interface";
 import { UploadCloud, Camera, Check, X } from "lucide-react";
 
@@ -128,7 +128,7 @@ export default function ReceiptButton() {
     setSaved(false);
 
     try {
-      const csv = await getReciptEntries(base64);
+      const csv = await getReceiptEntries(base64);
       const parsed = parseCSV(csv);
 
       if (parsed.length === 0) {
