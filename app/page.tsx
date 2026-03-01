@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
+import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight, Camera } from "lucide-react";
 import { getSoonToExpireItems } from "@/lib/supabase/interface";
+import ReceiptButton from "./receipt-button";
+import CameraScanner from "@/components/CameraScanner";
 
 type InventoryItem = {
   id: string;
@@ -18,6 +20,9 @@ export default function Dashboard() {
   const [soonItems, setSoonItems] = useState<InventoryItem[]>([]);
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [pendingItems, setPendingItems] = useState<any[]>([]);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,12 +93,31 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* SCAN ACTION CARD */}
-        <section className="bg-white border-2 border-dashed border-green-200 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-all cursor-pointer group">
-          <UploadCloud className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" />
-          <h2 className="text-sm font-bold mt-2">Scan Receipt</h2>
-          <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Powered by GPT-4o Vision</p>
-        </section>
+        {/* SCAN ACTIONS SECTION (Split Slot) */}
+        <div className="grid grid-cols-2 gap-4 h-full">
+          {/* 1. THE LIVE CAMERA BUTTON */}
+          <button 
+            onClick={() => setShowScanner(true)}
+            className="bg-green-50 border-2 border-dashed border-green-200 rounded-[2rem] flex flex-col items-center justify-center text-center hover:bg-green-100 hover:border-green-400 transition-all group cursor-pointer"
+          >
+            <div className="bg-white p-3 rounded-2xl shadow-sm mb-2 group-hover:scale-110 transition-transform">
+              <Camera className="w-6 h-6 text-green-600" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-green-700">Live Scan</span>
+          </button>
+
+          {/* 2. THE FILE UPLOAD BUTTON */}
+          <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center text-center hover:bg-slate-100 transition-all group cursor-pointer relative">
+            <div className="bg-white p-3 rounded-2xl shadow-sm mb-2 group-hover:scale-110 transition-transform">
+              <UploadCloud className="w-6 h-6 text-slate-600" />
+            </div>
+            {/* The ReceiptButton handles the actual file logic; we make it invisible but fill the box */}
+            <div className="absolute inset-0 opacity-0 overflow-hidden">
+              <ReceiptButton />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Upload</span>
+          </div>
+        </div>
       </div>
 
       {/* 2. MAIN GRID: INVENTORY & AI INSIGHTS */}
@@ -177,6 +201,15 @@ export default function Dashboard() {
           </div>
         </aside>
       </div>
+      {showScanner && (
+        <CameraScanner 
+          onClose={() => setShowScanner(false)} 
+          onCapture={(base64) => {
+            console.log("Captured image for OpenAI:", base64);
+            setShowScanner(false);
+          }} 
+        />
+      )}
     </div>
   );
 }
