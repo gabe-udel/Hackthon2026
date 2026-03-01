@@ -3,22 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
-import { getSoonToExpireItems, getAllItems } from "@/lib/supabase/interface";
+import { getSoonToExpireItems, getAllItems, type InventoryItemRecord } from "@/lib/supabase/interface";
 import { ShieldCheck } from "lucide-react";
 import ReceiptButton from "./receipt-button";
 
-type InventoryItem = {
-  id: string;
-  name: string;
-  category: string;
-  quantity: string;
-  expiration_date: string;
-  price?: number; // Added to handle the financial logic
-};
-
 export default function Dashboard() {
-  const [soonItems, setSoonItems] = useState<InventoryItem[]>([]);
-  const [allItems, setAllItems] = useState<InventoryItem[]>([]);
+  const [soonItems, setSoonItems] = useState<InventoryItemRecord[]>([]);
+  const [allItems, setAllItems] = useState<InventoryItemRecord[]>([]);
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
 
@@ -32,12 +23,12 @@ export default function Dashboard() {
       setLoadingSoon(true);
       try {
         const [soonData, allData] = await Promise.all([
-          getSoonToExpireItems(5),
+          getSoonToExpireItems(3),
           getAllItems(),
         ]);
         if (isMounted) {
-          setSoonItems((soonData ?? []) as InventoryItem[]);
-          setAllItems((allData ?? []) as InventoryItem[]);
+          setSoonItems(soonData ?? []);
+          setAllItems(allData ?? []);
         }
       } catch (err) {
         console.error("Failed to fetch items:", err);
@@ -60,6 +51,7 @@ export default function Dashboard() {
     if (allItems.length === 0 || todayMidnightMs === null) return 100;
     const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
     const freshCount = allItems.filter((item) => {
+      if (!item.expiration_date) return true;
       const exp = new Date(item.expiration_date);
       exp.setHours(0, 0, 0, 0);
       return exp.getTime() - todayMidnightMs > threeDaysMs;
@@ -67,8 +59,8 @@ export default function Dashboard() {
     return Math.round((freshCount / allItems.length) * 100);
   }, [allItems, todayMidnightMs]);
 
-  function daysUntil(dateStr: string) {
-    if (todayMidnightMs === null) return null;
+  function daysUntil(dateStr: string | null) {
+    if (todayMidnightMs === null || !dateStr) return null;
     const expiry = new Date(dateStr);
     expiry.setHours(0, 0, 0, 0);
     return Math.ceil((expiry.getTime() - todayMidnightMs) / (1000 * 60 * 60 * 24));
@@ -144,11 +136,11 @@ export default function Dashboard() {
                   <div key={item.id} className={`flex justify-between items-center p-5 rounded-3xl border transition-all hover:shadow-md ${styles.row}`}>
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-lg">
-                        {item.category === 'Dairy' ? '🥛' : item.category === 'Produce' ? '🥗' : '📦'}
+                        {item.category === 'dairy' ? '🥛' : item.category === 'fruit' || item.category === 'vegetable' ? '🥗' : '📦'}
                       </div>
                       <div>
                         <p className={`font-bold ${styles.text}`}>{item.name}</p>
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${styles.sub}`}>Qty: {item.quantity} • {item.category}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${styles.sub}`}>Qty: {item.current_quantity ?? 0} {item.user_unit ?? ''} • {item.category ?? 'Uncategorized'}</p>
                       </div>
                     </div>
                     <div className={`text-xs font-black italic flex items-center gap-2 ${styles.sub}`}>

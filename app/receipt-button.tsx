@@ -2,15 +2,25 @@
 
 import { useRef, useState } from "react";
 import { getReciptEntries } from "@/lib/openai/openai_interface";
-import { addItem } from "@/lib/supabase/interface";
+import { addItem, type StandardUnit } from "@/lib/supabase/interface";
 import { UploadCloud, Check, X } from "lucide-react";
 
 type ParsedEntry = {
   name: string;
   category: string;
+  quantity: number;
+  unit: string;
+  standardUnit: StandardUnit;
+  price: number;
   expiration_date: string;
-  price: string;
 };
+
+function inferStandardUnit(unit: string): StandardUnit {
+  const u = unit.trim().toLowerCase();
+  if (["ml", "l", "liter", "litre", "cup", "tbsp", "tsp", "fl oz", "floz"].includes(u)) return "ml";
+  if (["g", "kg", "oz", "lb", "lbs", "gram", "grams", "kilogram", "pound", "ounce"].includes(u)) return "g";
+  return "count";
+}
 
 function parseCSV(csv: string): ParsedEntry[] {
   return csv
@@ -19,8 +29,17 @@ function parseCSV(csv: string): ParsedEntry[] {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("item_name"))
     .map((line) => {
-      const [name, category, expiration_date, price] = line.split(",").map((s) => s.trim());
-      return { name, category, expiration_date, price: price || "0" };
+      const [name, category, qty, unit, price, expiration_date] = line.split(",").map((s) => s.trim());
+      const parsedUnit = unit || "count";
+      return {
+        name,
+        category,
+        quantity: parseFloat(qty) || 1,
+        unit: parsedUnit,
+        standardUnit: inferStandardUnit(parsedUnit),
+        price: parseFloat(price) || 0,
+        expiration_date,
+      };
     })
     .filter((e) => e.name && e.category && e.expiration_date);
 }
@@ -85,7 +104,15 @@ export default function ReceiptButton() {
     setSaving(true);
     try {
       for (const entry of entries) {
-        await addItem(entry.name, entry.category, "1", entry.expiration_date, new Date().toISOString(), entry.price);
+        await addItem({
+          name: entry.name,
+          category: entry.category,
+          quantity: entry.quantity,
+          userUnit: entry.unit,
+          standardUnit: entry.standardUnit,
+          price: entry.price,
+          expirationDate: entry.expiration_date,
+        });
       }
       setSaved(true);
       setTimeout(resetState, 1500);
@@ -149,6 +176,7 @@ export default function ReceiptButton() {
                   <tr>
                     <th className="py-2 text-left">Item</th>
                     <th className="py-2 text-left">Category</th>
+                    <th className="py-2 text-left">Qty</th>
                     <th className="py-2 text-left">Price</th>
                     <th className="py-2 text-left">Expires</th>
                   </tr>
@@ -158,7 +186,8 @@ export default function ReceiptButton() {
                     <tr key={i} className="text-slate-700">
                       <td className="py-2 font-medium">{entry.name}</td>
                       <td className="py-2 capitalize text-slate-500">{entry.category}</td>
-                      <td className="py-2 text-slate-500">${entry.price}</td>
+                      <td className="py-2 text-slate-500">{entry.quantity} {entry.unit}</td>
+                      <td className="py-2 text-slate-500">${entry.price.toFixed(2)}</td>
                       <td className="py-2 text-slate-500">{entry.expiration_date}</td>
                     </tr>
                   ))}
