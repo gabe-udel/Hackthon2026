@@ -28,6 +28,7 @@ export type Database = {
           standard_unit:
             | Database["public"]["Enums"]["standard_unit_type"]
             | null
+          status: number | null
           user_id: string | null
           user_unit: string | null
         }
@@ -44,6 +45,7 @@ export type Database = {
           standard_unit?:
             | Database["public"]["Enums"]["standard_unit_type"]
             | null
+          status?: number | null
           user_id?: string | null
           user_unit?: string | null
         }
@@ -60,6 +62,7 @@ export type Database = {
           standard_unit?:
             | Database["public"]["Enums"]["standard_unit_type"]
             | null
+          status?: number | null
           user_id?: string | null
           user_unit?: string | null
         }

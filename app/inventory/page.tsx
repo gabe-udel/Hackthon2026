@@ -5,6 +5,7 @@ import {
   sortBy,
   addItem,
   removeItem,
+  markAsExpired,
   updateExpiry,
   updateQuantity,
   updatePrice,
@@ -96,6 +97,8 @@ export default function InventoryPage() {
 
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
+
+  const [removeTarget, setRemoveTarget] = useState<InventoryItemRecord | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -191,12 +194,22 @@ export default function InventoryPage() {
   }
 
   async function handleRemove(item: InventoryItemRecord) {
-    if (!confirm(`Remove "${item.name}" from your pantry?`)) return;
+    setRemoveTarget(item);
+  }
+
+  async function handleRemoveChoice(choice: "used" | "expired") {
+    if (!removeTarget) return;
     try {
-      await removeItem(item.id);
+      if (choice === "used") {
+        await removeItem(removeTarget.id);
+      } else {
+        await markAsExpired(removeTarget.id);
+      }
+      setRemoveTarget(null);
       await fetchItems();
     } catch (err) {
       console.error("Failed to remove item:", err);
+      setRemoveTarget(null);
     }
   }
 
@@ -579,6 +592,36 @@ export default function InventoryPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Remove Item Modal */}
+      {removeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Remove &ldquo;{removeTarget.name}&rdquo;</h3>
+            <p className="text-sm text-slate-500 mb-6">Was this item used up or did it expire?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleRemoveChoice("used")}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition"
+              >
+                ✅ Used
+              </button>
+              <button
+                onClick={() => handleRemoveChoice("expired")}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition"
+              >
+                🗑️ Expired
+              </button>
+            </div>
+            <button
+              onClick={() => setRemoveTarget(null)}
+              className="mt-3 w-full text-sm text-slate-400 hover:text-slate-600 transition"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

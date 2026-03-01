@@ -12,13 +12,14 @@ export type ActionType = Database["public"]["Enums"]["action_type_enum"];
 export type StandardUnit = Database["public"]["Enums"]["standard_unit_type"];
 
 /**
- * Fetches all inventory items, ordered by expiration date (soonest first).
+ * Fetches all active (status=1) inventory items, ordered by expiration date (soonest first).
  */
 export async function getAllItems() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("inventory")
     .select("*")
+    .or("status.eq.1,status.is.null")
     .order("expiration_date", { ascending: true });
 
   if (error) throw error;
@@ -32,6 +33,33 @@ export async function removeItem(id: string) {
   const supabase = createClient();
   const { error } = await supabase.from("inventory").delete().eq("id", id);
   if (error) throw error;
+}
+
+/**
+ * Marks an inventory item as expired (status = -1) instead of deleting it.
+ */
+export async function markAsExpired(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("inventory")
+    .update({ status: -1 })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Fetches all expired (status = -1) inventory items.
+ */
+export async function getExpiredItems() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("status", -1)
+    .order("expiration_date", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as InventoryItemRecord[];
 }
 
 /**
@@ -62,6 +90,7 @@ export async function addItem(input: {
     conversion_factor: conversionFactor,
     price: input.price ?? null,
     expiration_date: input.expirationDate ?? null,
+    status: 1,
   };
 
   const { data, error } = await supabase.from("inventory").insert(payload).select().single();
@@ -78,7 +107,11 @@ export async function sortBy(x: number, ascending: boolean = true) {
   const columns = ["expiration_date", "category", "name", "created_at"] as const;
   const column = columns[x] ?? "expiration_date";
 
-  const { data, error } = await supabase.from("inventory").select("*").order(column, { ascending });
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .or("status.eq.1,status.is.null")
+    .order(column, { ascending });
 
   if (error) throw error;
   return (data ?? []) as InventoryItemRecord[];
@@ -160,6 +193,7 @@ export async function getSoonToExpireItems(days: number = 5) {
   const { data, error } = await supabase
     .from("inventory")
     .select("*")
+    .or("status.eq.1,status.is.null")
     .gte("expiration_date", startIso)
     .lte("expiration_date", endIso)
     .order("expiration_date", { ascending: true });

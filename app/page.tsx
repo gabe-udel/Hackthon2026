@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
-import { getSoonToExpireItems, getAllItems, type InventoryItemRecord } from "@/lib/supabase/interface";
+import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight, Skull } from "lucide-react";
+import { getSoonToExpireItems, getAllItems, getExpiredItems, type InventoryItemRecord } from "@/lib/supabase/interface";
 import { ShieldCheck } from "lucide-react";
 import ReceiptButton from "./receipt-button";
 
 export default function Dashboard() {
   const [soonItems, setSoonItems] = useState<InventoryItemRecord[]>([]);
   const [allItems, setAllItems] = useState<InventoryItemRecord[]>([]);
+  const [expiredItems, setExpiredItems] = useState<InventoryItemRecord[]>([]);
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
 
@@ -22,13 +23,15 @@ export default function Dashboard() {
     async function fetchItems() {
       setLoadingSoon(true);
       try {
-        const [soonData, allData] = await Promise.all([
+        const [soonData, allData, expiredData] = await Promise.all([
           getSoonToExpireItems(3),
           getAllItems(),
+          getExpiredItems(),
         ]);
         if (isMounted) {
           setSoonItems(soonData ?? []);
           setAllItems(allData ?? []);
+          setExpiredItems(expiredData ?? []);
         }
       } catch (err) {
         console.error("Failed to fetch items:", err);
@@ -226,6 +229,55 @@ export default function Dashboard() {
           </div>
         </aside>
       </div>
+
+      {/* 3. EXPIRED ITEMS SECTION */}
+      {expiredItems.length > 0 && (
+        <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-red-100">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-black tracking-tight flex items-center gap-3 text-red-600">
+              <Skull className="w-6 h-6" /> Expired Items
+            </h2>
+            <span className="text-xs font-bold text-red-400 bg-red-50 px-3 py-1 rounded-full">{expiredItems.length} wasted</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {expiredItems.map((item) => {
+              const wastedValue = item.price ?? 0;
+              return (
+                <div key={item.id} className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
+                  <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-base shadow-sm">
+                    {(() => {
+                      const c = (item.category ?? '').toLowerCase();
+                      if (c === 'dairy') return '🥛';
+                      if (c === 'fruit' || c === 'fruits') return '🍎';
+                      if (c === 'vegetable' || c === 'vegetables' || c === 'produce') return '🥬';
+                      if (c === 'meat' || c === 'poultry') return '🥩';
+                      if (c === 'seafood' || c === 'fish') return '🐟';
+                      if (c === 'grain' || c === 'grains' || c === 'bread' || c === 'bakery') return '🍞';
+                      if (c === 'beverage' || c === 'beverages' || c === 'drink' || c === 'drinks') return '🧃';
+                      if (c === 'frozen') return '🧊';
+                      if (c === 'snack' || c === 'snacks') return '🍿';
+                      if (c === 'condiment' || c === 'condiments' || c === 'sauce' || c === 'spice' || c === 'spices') return '🧂';
+                      if (c === 'egg' || c === 'eggs') return '🥚';
+                      if (c === 'deli') return '🥪';
+                      return '🍽️';
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-red-900 text-sm truncate">{item.name}</p>
+                    <p className="text-[10px] text-red-500 font-medium">
+                      {wastedValue > 0 ? `$${wastedValue.toFixed(2)} wasted` : item.category ?? 'Uncategorized'}
+                      {item.expiration_date ? ` • expired ${item.expiration_date}` : ''}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-xs text-red-400 italic text-center">
+            Total wasted: ${expiredItems.reduce((sum, i) => sum + (i.price ?? 0), 0).toFixed(2)}
+          </p>
+        </section>
+      )}
     </div>
   );
 }
