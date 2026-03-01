@@ -31,6 +31,9 @@ Respond ONLY with valid JSON in this exact schema (no markdown, no backticks, ju
   "directions": ["Preheat oven to 375°F.", "Dice the chicken into 1-inch cubes.", ...]
 }
 
+Keep directions clear and beginner-friendly. Include cooking temps in °F, specific quantities, and timing for each step.`;
+}
+
 function parseRecipeResponse(raw: string): Recipe {
   const cleaned = raw
     .replace(/```json\s*/gi, "")
