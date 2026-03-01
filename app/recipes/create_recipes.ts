@@ -1,6 +1,14 @@
 import { getAllItems } from "@/lib/supabase/interface";
 import { askChat } from "@/lib/openai/openai_interface";
 
+export type Recipe = {
+  name: string;
+  prepTime: string;
+  servings: string;
+  ingredients: string[];
+  directions: string[];
+};
+
 function createIngredientsList(x: any[]): string {
     const result = x.map((item: any) => `${item.name},${item.expiration_date}`).join("\n");
     return result;
@@ -17,26 +25,38 @@ Please suggest ONE recipe that:
 2. Uses as many of the listed ingredients as possible.
 3. Is a realistic, complete meal (not just a snack).
 
-Respond in this exact format:
-RECIPE NAME: <name>
-INGREDIENTS USED: <comma-separated list of ingredients from the list above>
-PREP TIME: <estimated time>
-SERVINGS: <number>
-
-DIRECTIONS:
-1. <step 1 with specific measurements, temperatures, and times>
-2. <step 2>
-...
+Respond ONLY with valid JSON in this exact schema (no markdown, no backticks, just raw JSON):
+{
+  "name": "Recipe Name",
+  "prepTime": "25 min",
+  "servings": "4",
+  "ingredients": ["2 cups flour", "1 lb chicken breast", ...],
+  "directions": ["Preheat oven to 375°F.", "Dice the chicken into 1-inch cubes.", ...]
+}
 
 Keep directions clear and beginner-friendly. Include cooking temps in °F, specific quantities, and timing for each step.`;
 }
 
-export async function generateRecipes(): Promise<string[]> {
+export async function generateRecipes(): Promise<Recipe[]> {
     const items = await getAllItems();
     const allIngredientsFormatted = createIngredientsList(items);
 
     const prompt = createRecipePrompt(allIngredientsFormatted);
     const response = await askChat(prompt);
 
-    return [response];
+    try {
+        // Strip markdown fences if the model wraps it
+        const cleaned = response.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+        const parsed = JSON.parse(cleaned) as Recipe;
+        return [parsed];
+    } catch {
+        // Fallback: return as a single "raw" recipe
+        return [{
+            name: "Generated Recipe",
+            prepTime: "—",
+            servings: "—",
+            ingredients: [],
+            directions: [response],
+        }];
+    }
 }
