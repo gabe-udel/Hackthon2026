@@ -82,6 +82,12 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
       
       {/* 1. TOP SECTION: THE BIG STATS (BENTO STYLE) */}
+      {/* leaderboard button added for convenience */}
+      <div className="flex justify-end">
+        <Link href="/user/leaderboard" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mb-4">
+          Nearby People
+        </Link>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* MEALS SAVED CARD */}
         <div className="bg-green-600 text-white p-6 rounded-[2rem] shadow-lg shadow-green-900/20 flex flex-col justify-between aspect-square md:aspect-auto min-h-[160px]">
