@@ -192,7 +192,7 @@ export default function Dashboard() {
         <div className="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[160px] hover:shadow-md transition">
           <div className="flex justify-between items-start">
             <Wallet className="text-green-600 w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">At risk</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Warning</span>
           </div>
           <div>
             <p className="text-4xl font-black text-slate-900">${cashAtRisk.toFixed(2)}</p>
@@ -247,8 +247,23 @@ export default function Dashboard() {
                 return (
                   <div key={item.id} className={`flex justify-between items-center p-5 rounded-3xl border transition-all hover:shadow-md ${styles.row}`}>
                     <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm text-xl">
-                        {getCategoryEmoji(item.category)}
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-lg">
+                        {(() => {
+                          const c = (item.category ?? '').toLowerCase();
+                          if (c === 'dairy') return '🥛';
+                          if (c === 'fruit' || c === 'fruits') return '🍎';
+                          if (c === 'vegetable' || c === 'vegetables' || c === 'produce') return '🥬';
+                          if (c === 'meat' || c === 'poultry') return '🥩';
+                          if (c === 'seafood' || c === 'fish') return '🐟';
+                          if (c === 'grain' || c === 'grains' || c === 'bread' || c === 'bakery') return '🍞';
+                          if (c === 'beverage' || c === 'beverages' || c === 'drink' || c === 'drinks') return '🧃';
+                          if (c === 'frozen') return '🧊';
+                          if (c === 'snack' || c === 'snacks') return '🍿';
+                          if (c === 'condiment' || c === 'condiments' || c === 'sauce' || c === 'spice' || c === 'spices') return '🧂';
+                          if (c === 'egg' || c === 'eggs') return '🥚';
+                          if (c === 'deli') return '🥪';
+                          return '🍽️';
+                        })()}
                       </div>
                       <div>
                         <p className={`font-bold ${styles.text}`}>{toTitleCase(item.name)}</p>
@@ -283,9 +298,7 @@ export default function Dashboard() {
               <Utensils className="text-green-400 w-5 h-5" /> AI Chef
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed italic mb-6 relative z-10">
-              {soonItems.length > 0
-                ? `Use ${soonItems[0]?.name ?? "your expiring items"} in a recipe and save $${cashAtRisk.toFixed(0)} from going to waste.`
-                : "Add items with expiry dates, then we’ll suggest recipes to use them up."}
+              "Based on your expiring items, I recommend making a quick frittata to help save ${cashAtRisk.toFixed(0)}."
             </p>
             <Link href="/recipes" className="block w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10 text-center">
               Generate recipe
