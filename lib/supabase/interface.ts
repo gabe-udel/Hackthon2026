@@ -1,124 +1,166 @@
 /**
- * Supabase inventory database interface.
- * Provides CRUD operations and sorting for the "inventory" table.
- *
- * Table schema:
- *   id             (uuid)         - auto-generated
- *   user_id        (uuid)
- *   name           (text)
- *   category       (text)
- *   quantity       (text)
- *   expiration_date (date)
- *   created_at     (timestamptz)  - auto-generated
+ * Supabase inventory database interface for the Savor schema.
+ * Uses typed Supabase client and supports partial usage logging.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export type InventoryItemRecord = Database["public"]["Tables"]["inventory"]["Row"];
+export type InventoryInsert = Database["public"]["Tables"]["inventory"]["Insert"];
+export type ActionType = Database["public"]["Enums"]["action_type_enum"];
+export type StandardUnit = Database["public"]["Enums"]["standard_unit_type"];
 
 /**
- * Fetches all inventory items, ordered by expiration date (latest first).
- * @returns Array of inventory row objects.
+ * Fetches all inventory items, ordered by expiration date (soonest first).
  */
 export async function getAllItems() {
-    const { data, error } = await supabase
+  const supabase = createClient();
+  const { data, error } = await supabase
     .from("inventory")
     .select("*")
-    .order("expiration_date", { ascending: false });
+    .order("expiration_date", { ascending: true });
 
   if (error) throw error;
-  return data;
+  return (data ?? []) as InventoryItemRecord[];
 }
 
 /**
- * Removes an inventory item identified by its name and creation timestamp.
- * @param name       - The item name.
- * @param createdAt  - The item's created_at timestamp (used to disambiguate duplicates).
+ * Removes an inventory item by primary key.
  */
-export async function removeItem(name: string, createdAt: string) {
-    const { error } = await supabase
-        .from("inventory")
-        .delete()
-        .eq("name", name)
-        .eq("created_at", createdAt);
-    if (error) throw error;
+export async function removeItem(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("inventory").delete().eq("id", id);
+  if (error) throw error;
 }
 
 /**
- * Inserts a new item into the inventory table.
- * @param name           - Item name (e.g. "Apples").
- * @param category       - Item category (e.g. "Fruit").
- * @param quantity       - Quantity as text (e.g. "5").
- * @param expirationDate - Expiration date string (e.g. "2026-03-10").
- * @param createdAt      - Creation timestamp string.
+ * Adds a new inventory item with expanded quantity/unit schema.
  */
-export async function addItem(name: string, category: string, quantity: string, expirationDate: string, createdAt: string) {
-    const { error } = await supabase.from("inventory").insert([
-        { name, category, quantity, expiration_date: expirationDate, created_at: createdAt }
-    ]);
-    if (error) throw error;
+export async function addItem(input: {
+  name: string;
+  category?: string | null;
+  quantity: number;
+  userUnit: string;
+  standardUnit: StandardUnit;
+  price?: number | null;
+  expirationDate?: string | null;
+}) {
+  const supabase = createClient();
+
+  // Internal-only conversion factor management. This is intentionally not
+  // user-provided to keep cataloging UX simple and consistent.
+  const conversionFactor = inferConversionFactor(input.userUnit, input.standardUnit);
+
+  const payload: InventoryInsert = {
+    name: input.name.trim(),
+    category: input.category ?? null,
+    initial_quantity: input.quantity,
+    current_quantity: input.quantity,
+    user_unit: input.userUnit.trim(),
+    standard_unit: input.standardUnit,
+    conversion_factor: conversionFactor,
+    price: input.price ?? null,
+    expiration_date: input.expirationDate ?? null,
+  };
+
+  const { data, error } = await supabase.from("inventory").insert(payload).select().single();
+  if (error) throw error;
+  return data as InventoryItemRecord;
 }
 
 /**
  * Fetches all inventory items sorted by a chosen column.
- * @param x - Sort mode: 0 = expiration date, 1 = category, 2 = name (alphabetical), 3 = created at.
- *            Defaults to expiration date if an invalid value is provided.
- * @param ascending - Sort direction. Defaults to true (ascending).
- * @returns Sorted array of inventory row objects.
+ * x: 0 = expiration_date, 1 = category, 2 = name, 3 = created_at
  */
 export async function sortBy(x: number, ascending: boolean = true) {
-    const columns = ["expiration_date", "category", "name", "created_at"];
-    const column = columns[x] ?? "expiration_date";
+  const supabase = createClient();
+  const columns = ["expiration_date", "category", "name", "created_at"] as const;
+  const column = columns[x] ?? "expiration_date";
 
-    const { data, error } = await supabase
-        .from("inventory")
-        .select("*")
-        .order(column, { ascending });
+  const { data, error } = await supabase.from("inventory").select("*").order(column, { ascending });
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return (data ?? []) as InventoryItemRecord[];
 }
 
 /**
  * Updates the expiration date of an existing inventory item.
- * @param name              - The item name.
- * @param createdAt         - The item's created_at timestamp (used to identify the row).
- * @param newExpirationDate - The new expiration date string (e.g. "2026-04-01").
  */
-export async function updateExpiry(name: string, createdAt: string, newExpirationDate: string) {
-    const { error } = await supabase
-        .from("inventory")
-        .update({ expiration_date: newExpirationDate })
-        .eq("name", name)
-        .eq("created_at", createdAt);
-    if (error) throw error;
+export async function updateExpiry(id: string, newExpirationDate: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("inventory")
+    .update({ expiration_date: newExpirationDate })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+function inferConversionFactor(userUnit: string, standardUnit: StandardUnit): number {
+  const u = userUnit.trim().toLowerCase();
+
+  if (standardUnit === "g") {
+    if (u === "kg" || u === "kilogram" || u === "kilograms") return 1000;
+    if (u === "g" || u === "gram" || u === "grams") return 1;
+    if (u === "lb" || u === "lbs" || u === "pound" || u === "pounds") return 453.5924;
+    if (u === "oz" || u === "ounce" || u === "ounces") return 28.3495;
+  }
+
+  if (standardUnit === "ml") {
+    if (u === "l" || u === "liter" || u === "litre" || u === "liters" || u === "litres") return 1000;
+    if (u === "ml" || u === "milliliter" || u === "millilitre" || u === "milliliters" || u === "millilitres") return 1;
+    if (u === "cup" || u === "cups") return 236.588;
+    if (u === "tbsp" || u === "tablespoon" || u === "tablespoons") return 14.7868;
+    if (u === "tsp" || u === "teaspoon" || u === "teaspoons") return 4.92892;
+    if (u === "fl oz" || u === "floz") return 29.5735;
+  }
+
+  // count and unknown units default to 1:1 until AI normalization refines it.
+  return 1;
 }
 
 /**
  * Fetches inventory items expiring between today and the next `days` days.
- * @param days - Number of days ahead to include. Defaults to 5.
- * @returns Array of soon-to-expire inventory row objects ordered by expiration date.
  */
 export async function getSoonToExpireItems(days: number = 5) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const supabase = createClient();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + days);
+  const endDate = new Date(today);
+  endDate.setDate(endDate.getDate() + days);
 
-    const startIso = today.toISOString().slice(0, 10);
-    const endIso = endDate.toISOString().slice(0, 10);
+  const startIso = today.toISOString().slice(0, 10);
+  const endIso = endDate.toISOString().slice(0, 10);
 
-    const { data, error } = await supabase
-        .from("inventory")
-        .select("*")
-        .gte("expiration_date", startIso)
-        .lte("expiration_date", endIso)
-        .order("expiration_date", { ascending: true });
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .gte("expiration_date", startIso)
+    .lte("expiration_date", endIso)
+    .order("expiration_date", { ascending: true });
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return (data ?? []) as InventoryItemRecord[];
+}
+
+/**
+ * Atomic partial usage logger via RPC function:
+ * public.log_partial_usage(p_item_id, p_amount_used, p_action_type)
+ */
+export async function logPartialUsage(itemId: string, amountUsed: number, actionType: ActionType) {
+  if (!itemId) throw new Error("itemId is required");
+  if (!Number.isFinite(amountUsed) || amountUsed <= 0) {
+    throw new Error("amountUsed must be a positive number");
+  }
+
+  const supabase = createClient();
+
+  const { error } = await supabase.rpc("log_partial_usage", {
+    p_item_id: itemId,
+    p_amount_used: amountUsed,
+    p_action_type: actionType,
+  });
+
+  if (error) throw error;
 }
