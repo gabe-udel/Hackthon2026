@@ -142,7 +142,22 @@ export default function Dashboard() {
                   <div key={item.id} className={`flex justify-between items-center p-5 rounded-3xl border transition-all hover:shadow-md ${styles.row}`}>
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-lg">
-                        {item.category === 'dairy' ? '🥛' : item.category === 'fruit' || item.category === 'vegetable' ? '🥗' : '📦'}
+                        {(() => {
+                          const c = (item.category ?? '').toLowerCase();
+                          if (c === 'dairy') return '🥛';
+                          if (c === 'fruit' || c === 'fruits') return '🍎';
+                          if (c === 'vegetable' || c === 'vegetables' || c === 'produce') return '🥬';
+                          if (c === 'meat' || c === 'poultry') return '🥩';
+                          if (c === 'seafood' || c === 'fish') return '🐟';
+                          if (c === 'grain' || c === 'grains' || c === 'bread' || c === 'bakery') return '🍞';
+                          if (c === 'beverage' || c === 'beverages' || c === 'drink' || c === 'drinks') return '🧃';
+                          if (c === 'frozen') return '🧊';
+                          if (c === 'snack' || c === 'snacks') return '🍿';
+                          if (c === 'condiment' || c === 'condiments' || c === 'sauce' || c === 'spice' || c === 'spices') return '🧂';
+                          if (c === 'egg' || c === 'eggs') return '🥚';
+                          if (c === 'deli') return '🥪';
+                          return '🍽️';
+                        })()}
                       </div>
                       <div>
                         <p className={`font-bold ${styles.text}`}>{item.name}</p>
