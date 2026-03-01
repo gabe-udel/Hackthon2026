@@ -99,7 +99,7 @@ export default function Dashboard() {
         <div className="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[160px]">
           <div className="flex justify-between items-start">
             <Wallet className="text-green-600 w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Risk Warning</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Warning</span>
           </div>
           <div>
             <p className="text-4xl font-black text-slate-900">${cashAtRisk.toFixed(2)}</p>
@@ -169,7 +169,7 @@ export default function Dashboard() {
               <Utensils className="text-green-400 w-5 h-5" /> AI Chef Suggestion
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed italic mb-6 relative z-10">
-              "Based on your expiring {soonItems[0]?.name || 'items'}, I recommend making a quick frittata to save ${cashAtRisk.toFixed(0)}."
+              "Based on your expiring items, I recommend making a quick frittata to help save ${cashAtRisk.toFixed(0)}."
             </p>
             <Link href="/recipes" className="block w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10 text-center">
               Generate Recipe
