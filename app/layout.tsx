@@ -1,5 +1,6 @@
 import './globals.css';
 import Link from 'next/link';
+import { User } from 'lucide-react';
 
 export default function RootLayout({
   children,
@@ -27,6 +28,13 @@ export default function RootLayout({
               AI Recipes
             </Link>
           </nav>
+
+          <div className="py-6 border-t border-b space-y-4">
+            <Link href="/user" className="flex items-center gap-3 p-3 hover:bg-green-50 rounded-lg transition-colors font-medium text-slate-700 hover:text-green-700">
+              <User className="w-5 h-5" />
+              <span>User Profile</span>
+            </Link>
+          </div>
 
           <div className="pt-6 border-t text-xs text-slate-400">
             Hackathon 2026 • Abby & Team
