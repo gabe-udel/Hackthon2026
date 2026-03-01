@@ -83,6 +83,16 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
+
+      {/* SUSTAINABILITY TIP BANNER */}
+      <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
+        <p className="text-sm text-green-800">
+          <span className="font-bold">🌱 Tip:</span> Up to 40% of food in the US is wasted — plan meals around what expires first to make a difference.
+        </p>
+        <Link href="/sustainability" className="text-xs font-bold text-green-600 hover:text-green-800 whitespace-nowrap ml-4 hover:underline">
+          See more tips &rarr;
+        </Link>
+      </div>
       
       {/* 1. TOP SECTION: THE BIG STATS (BENTO STYLE) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

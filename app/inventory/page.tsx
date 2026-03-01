@@ -12,6 +12,7 @@ import {
   type InventoryItemRecord,
   type StandardUnit,
 } from "@/lib/supabase/interface";
+import { toTitleCase } from "@/lib/utils";
 
 // sortBy indices: 0 = expiration_date, 1 = category, 2 = name, 3 = created_at
 type UnitOption = {
@@ -98,7 +99,8 @@ export default function InventoryPage() {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
 
-  const [removeTarget, setRemoveTarget] = useState<InventoryItemRecord | null>(null);
+  const [removeConfirmItem, setRemoveConfirmItem] = useState<InventoryItemRecord | null>(null);
+  const [removeLogging, setRemoveLogging] = useState(false);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -165,8 +167,8 @@ export default function InventoryPage() {
 
     try {
       await addItem({
-        name: newName,
-        category: newCategory,
+        name: toTitleCase(newName),
+        category: toTitleCase(newCategory),
         quantity,
         userUnit: selectedUnit.userUnit,
         standardUnit: selectedUnit.standardUnit,
@@ -194,22 +196,23 @@ export default function InventoryPage() {
   }
 
   async function handleRemove(item: InventoryItemRecord) {
-    setRemoveTarget(item);
+    setRemoveConfirmItem(item);
   }
 
-  async function handleRemoveChoice(choice: "used" | "expired") {
-    if (!removeTarget) return;
+  async function handleRemoveConfirm(item: InventoryItemRecord, action: "used" | "wasted" | "skip") {
+    setRemoveLogging(true);
     try {
-      if (choice === "used") {
-        await removeItem(removeTarget.id);
+      if (action === "wasted") {
+        await markAsExpired(item.id);
       } else {
-        await markAsExpired(removeTarget.id);
+        await removeItem(item.id);
       }
-      setRemoveTarget(null);
       await fetchItems();
+      setRemoveConfirmItem(null);
     } catch (err) {
       console.error("Failed to remove item:", err);
-      setRemoveTarget(null);
+    } finally {
+      setRemoveLogging(false);
     }
   }
 
@@ -451,8 +454,8 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-slate-100">
               {items.map((item) => (
                 <tr key={item.id} className="bg-white transition hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.category ?? "—"}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">{toTitleCase(item.name)}</td>
+                  <td className="px-4 py-3 text-slate-600">{toTitleCase(item.category) || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {editingQtyId === item.id ? (
                       <div className="flex items-center gap-2">
@@ -595,32 +598,37 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Remove Item Modal */}
-      {removeTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Remove &ldquo;{removeTarget.name}&rdquo;</h3>
-            <p className="text-sm text-slate-500 mb-6">Was this item used up or did it expire?</p>
-            <div className="flex gap-3">
+      {/* Remove: did you use it or throw it away? */}
+      {removeConfirmItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="font-bold text-slate-900 mb-1">Remove &quot;{toTitleCase(removeConfirmItem.name)}&quot;?</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Help us track your impact: did you use this or did it go to waste?
+            </p>
+            <div className="flex flex-col gap-2">
               <button
-                onClick={() => handleRemoveChoice("used")}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition"
+                onClick={() => handleRemoveConfirm(removeConfirmItem, "used")}
+                disabled={removeLogging}
+                className="w-full py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50"
               >
-                ✅ Used
+                {removeLogging ? "\u2026" : "Used it"}
               </button>
               <button
-                onClick={() => handleRemoveChoice("expired")}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition"
+                onClick={() => handleRemoveConfirm(removeConfirmItem, "wasted")}
+                disabled={removeLogging}
+                className="w-full py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50"
               >
-                🗑️ Expired
+                It went to waste
+              </button>
+              <button
+                onClick={() => handleRemoveConfirm(removeConfirmItem, "skip")}
+                disabled={removeLogging}
+                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
+              >
+                Just remove (don&apos;t log)
               </button>
             </div>
-            <button
-              onClick={() => setRemoveTarget(null)}
-              className="mt-3 w-full text-sm text-slate-400 hover:text-slate-600 transition"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
