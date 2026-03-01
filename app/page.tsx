@@ -190,16 +190,16 @@ export default function Dashboard() {
           {/* QUICK ANALYTICS CARD */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" /> Monthly Trends
+              <TrendingUp className="w-4 h-4" /> Pantry Overview
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 p-4 rounded-2xl">
-                <p className="text-[10px] text-slate-500 uppercase font-bold">Waste Saved</p>
-                <p className="text-2xl font-black text-slate-900">88%</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold">Total Value</p>
+                <p className="text-2xl font-black text-slate-900">${allItems.reduce((sum, i) => sum + (i.price ?? 0), 0).toFixed(0)}</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-2xl">
-                <p className="text-[10px] text-slate-500 uppercase font-bold">Items Logged</p>
-                <p className="text-2xl font-black text-slate-900">{soonItems.length + 20}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold">Items Tracked</p>
+                <p className="text-2xl font-black text-slate-900">{allItems.length}</p>
               </div>
             </div>
           </div>
