@@ -29,7 +29,7 @@ export default function RootLayout({
           </div>
 
           <div className="pt-6 border-t text-xs text-slate-400">
-            Hackathon 2026
+            Henhacks 2026
           </div>
         </aside>
 

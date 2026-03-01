@@ -14,9 +14,38 @@ export default function Dashboard() {
   const [loadingSoon, setLoadingSoon] = useState(true);
   const [todayMidnightMs, setTodayMidnightMs] = useState<number | null>(null);
 
+  const [greeting, setGreeting] = useState("Hello");
+  const [mounted, setMounted] = useState(false);
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+}, []);
+
   useEffect(() => {
     let isMounted = true;
+    
+    // 1. Set mounted to true and handle the Date on the client only
+    setMounted(true);
     const d = new Date();
+    
+    // Set the Greeting
+    const hour = d.getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+
+    // Set the Formatted Date
+    setFormattedDate(d.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    }));
+
+    // 2. Set midnight for your expiry logic
     d.setHours(0, 0, 0, 0);
     setTodayMidnightMs(d.getTime());
 
@@ -103,6 +132,17 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
+      {/* PAGE TITLE & GREETING */}
+      <div className="pt-4 px-2">
+        <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+          {greeting}!
+        </h1>
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-3 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          {/* DO NOT USE new Date() here. Use the state variable instead. */}
+          {mounted ? formattedDate : "Loading..."} 
+        </p>
+      </div>
 
       {/* SUSTAINABILITY TIP BANNER */}
       <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
