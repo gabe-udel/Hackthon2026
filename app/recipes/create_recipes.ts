@@ -1,5 +1,5 @@
 import { getSoonToExpireItems, getAllItems, type InventoryItemRecord } from "@/lib/supabase/interface";
-import { askChat } from "@/lib/openai/openai_interface";
+import { askChat } from "@/lib/gemini/gemini_interface";
 
 export type Recipe = {
   name: string;
@@ -42,72 +42,63 @@ function parseRecipeResponse(raw: string): Recipe {
   try {
     const parsed = JSON.parse(cleaned) as Recipe;
     if (!parsed.name || !Array.isArray(parsed.directions)) {
-      throw new Error("Invalid shape");
+      throw new Error("Invalid shape: missing name or directions");
     }
     return {
       name: String(parsed.name),
       prepTime: String(parsed.prepTime ?? "—"),
       servings: String(parsed.servings ?? "—"),
-      ingredientsFromPantry: Array.isArray(parsed.ingredientsFromPantry)
-        ? parsed.ingredientsFromPantry.map((i: RecipeIngredient) => ({
-            name: String(i?.name ?? ""),
-            quantity: i?.quantity != null ? String(i.quantity) : undefined,
-            note: i?.note != null ? String(i.note) : undefined,
-          }))
-        : [],
-      ingredientsToBuy: Array.isArray(parsed.ingredientsToBuy)
-        ? parsed.ingredientsToBuy.map((i: RecipeIngredient) => ({
-            name: String(i?.name ?? ""),
-            quantity: i?.quantity != null ? String(i.quantity) : undefined,
-            note: i?.note != null ? String(i.note) : undefined,
-          }))
+      ingredients: Array.isArray(parsed.ingredients) 
+        ? parsed.ingredients.map((i: unknown) => String(i ?? ""))
         : [],
       directions: parsed.directions.map((s: unknown) => String(s ?? "")),
     };
-  } catch {
+  } catch (error) {
+    console.error("Error parsing recipe response:", error, "Raw:", raw);
     return {
       name: "Generated Recipe",
       prepTime: "—",
       servings: "—",
-      ingredientsFromPantry: [],
-      ingredientsToBuy: [],
+      ingredients: [],
       directions: [raw],
     };
   }
 }
 
 export async function generateRecipes(): Promise<Recipe[]> {
-    const items = await getAllItems();
-    const allIngredientsFormatted = createIngredientsList(items);
-
-  if (pantryLines.trim().length === 0) {
-    return [
-      {
-        name: "Add ingredients first",
-        prepTime: "—",
-        servings: "—",
-        ingredientsFromPantry: [],
-        ingredientsToBuy: [],
-        directions: [
-          "You don't have any items in your pantry yet. Add ingredients in My Pantry or scan a receipt, then come back to generate a recipe that uses what you have.",
-        ],
-      },
-    ];
-  }
-
     try {
-        // Strip markdown fences if the model wraps it
-        const cleaned = response.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-        const parsed = JSON.parse(cleaned) as Recipe;
-        return [parsed];
-    } catch {
-        // Fallback: return as a single "raw" recipe
+        const items = await getAllItems();
+        const allIngredientsFormatted = createIngredientsList(items);
+
+        if (allIngredientsFormatted.trim().length === 0) {
+            return [
+                {
+                    name: "Add ingredients first",
+                    prepTime: "—",
+                    servings: "—",
+                    ingredients: [],
+                    directions: [
+                        "You don't have any items in your pantry yet. Add ingredients in My Pantry or scan a receipt, then come back to generate a recipe that uses what you have.",
+                    ],
+                },
+            ];
+        }
+
+        const prompt = createRecipePrompt(allIngredientsFormatted);
+        console.log("Sending prompt to Gemini:", prompt.substring(0, 100) + "...");
+        const response = await askChat(prompt);
+        console.log("Gemini response:", response.substring(0, 200) + "...");
+        
+        const recipe = parseRecipeResponse(response);
+        return [recipe];
+    } catch (error) {
+        console.error("Error generating recipes:", error);
         return [{
-            name: "Generated Recipe",
+            name: "Error generating recipe",
             prepTime: "—",
             servings: "—",
             ingredients: [],
-            directions: [response],
+            directions: ["An error occurred while generating the recipe. Check console for details."],
         }];
     }
 }

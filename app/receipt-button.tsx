@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { getReciptEntries } from "@/lib/openai/openai_interface";
+import { getReciptEntries } from "@/lib/gemini/gemini_interface";
 import { addItem, type StandardUnit } from "@/lib/supabase/interface";
 import { UploadCloud, Camera, Check, X } from "lucide-react";
 
