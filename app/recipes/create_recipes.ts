@@ -1,5 +1,5 @@
 import { getAllItems } from "@/lib/supabase/interface";
-import { askChat } from "@/lib/openai/openai_interface";
+import { askGemini } from "@/lib/gemini/gemini_interface";
 
 export type Recipe = {
   name: string;
@@ -42,7 +42,7 @@ export async function generateRecipes(): Promise<Recipe[]> {
     const allIngredientsFormatted = createIngredientsList(items);
 
     const prompt = createRecipePrompt(allIngredientsFormatted);
-    const response = await askChat(prompt);
+    const response = await askGemini(prompt);
 
     try {
         // Strip markdown fences if the model wraps it
