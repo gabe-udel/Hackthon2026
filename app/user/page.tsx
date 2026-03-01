@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, LogIn } from "lucide-react";
 
 type AuthMode = "login" | "signup";
@@ -12,6 +13,19 @@ export default function UserPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  // if user already logged in, redirect to success page automatically
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      router.replace("/user/success");
+    } else {
+      setChecking(false);
+    }
+  }, [router]);
 
   function validateForm() {
     setError("");
@@ -41,6 +55,8 @@ export default function UserPage() {
     // Frontend only - store in localStorage for demo
     localStorage.setItem("user_email", email);
     localStorage.setItem("auth_token", `token_${Date.now()}`);
+    // navigate to the success page
+    router.push("/user/success");
   }
 
   function handleSignup() {
@@ -49,6 +65,7 @@ export default function UserPage() {
     console.log("Signup attempt:", { email, password });
     localStorage.setItem("user_email", email);
     localStorage.setItem("auth_token", `token_${Date.now()}`);
+    router.push("/user/success");
   }
 
   function handleGoogleLogin() {
@@ -68,6 +85,10 @@ export default function UserPage() {
     
     // Uncomment below to actually redirect to Google
     // window.location.href = googleAuthUrl;
+  }
+
+  if (checking) {
+    return null; // or a spinner
   }
 
   return (
@@ -203,7 +224,7 @@ export default function UserPage() {
         <div className="text-center text-sm text-slate-600">
           {mode === "login" ? (
             <>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={() => {
                   setMode("signup");
