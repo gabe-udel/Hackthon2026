@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { UploadCloud, Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
+import { Utensils, TrendingUp, AlertTriangle, Clock3, Leaf, Wallet, ChevronRight } from "lucide-react";
 import { getSoonToExpireItems } from "@/lib/supabase/interface";
 import ReceiptButton from "./receipt-button";
 
@@ -153,9 +153,9 @@ export default function Dashboard() {
             <p className="text-sm text-slate-300 leading-relaxed italic mb-6 relative z-10">
               "Based on your expiring {soonItems[0]?.name || 'items'}, I recommend making a quick frittata to save ${cashAtRisk.toFixed(0)}."
             </p>
-            <button className="w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10">
+            <Link href="/recipes" className="block w-full bg-green-500 hover:bg-green-400 text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 relative z-10 text-center">
               Generate Recipe
-            </button>
+            </Link>
           </div>
 
           {/* QUICK ANALYTICS CARD */}
