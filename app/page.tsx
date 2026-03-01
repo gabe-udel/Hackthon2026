@@ -59,6 +59,12 @@ export default function Dashboard() {
     return Math.round((freshCount / allItems.length) * 100);
   }, [allItems, todayMidnightMs]);
 
+  // Fun equivalence: what could you "save" by using soon-to-expire items?
+  const mealsEquivalent = useMemo(() => {
+    const avgMealCost = 12; // average cost of eating out
+    return Math.max(Math.round(cashAtRisk / avgMealCost), 0);
+  }, [cashAtRisk]);
+
   function daysUntil(dateStr: string | null) {
     if (todayMidnightMs === null || !dateStr) return null;
     const expiry = new Date(dateStr);
@@ -77,15 +83,15 @@ export default function Dashboard() {
       
       {/* 1. TOP SECTION: THE BIG STATS (BENTO STYLE) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* ECO IMPACT CARD */}
+        {/* MEALS SAVED CARD */}
         <div className="bg-green-600 text-white p-6 rounded-[2rem] shadow-lg shadow-green-900/20 flex flex-col justify-between aspect-square md:aspect-auto min-h-[160px]">
           <div className="flex justify-between items-start">
             <Leaf className="w-6 h-6 opacity-80" />
-            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Carbon Saved</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Use It Up</span>
           </div>
           <div>
-            <p className="text-4xl font-black italic">34.5<span className="text-lg ml-1 font-normal opacity-70">mi</span></p>
-            <p className="text-xs font-medium opacity-80">Driving emissions prevented</p>
+            <p className="text-4xl font-black italic">{mealsEquivalent}<span className="text-lg ml-1 font-normal opacity-70">{mealsEquivalent === 1 ? 'meal' : 'meals'}</span></p>
+            <p className="text-xs font-medium opacity-80">Worth of dining out — cook your expiring items instead!</p>
           </div>
         </div>
 
