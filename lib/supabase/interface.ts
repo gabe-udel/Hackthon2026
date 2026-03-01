@@ -108,6 +108,18 @@ export async function updateQuantity(id: string, newQuantity: number) {
   if (error) throw error;
 }
 
+/**
+ * Updates the price of an inventory item.
+ */
+export async function updatePrice(id: string, newPrice: number | null) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("inventory")
+    .update({ price: newPrice })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 function inferConversionFactor(userUnit: string, standardUnit: StandardUnit): number {
   const u = userUnit.trim().toLowerCase();
 

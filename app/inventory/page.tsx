@@ -7,6 +7,7 @@ import {
   removeItem,
   updateExpiry,
   updateQuantity,
+  updatePrice,
   type InventoryItemRecord,
   type StandardUnit,
 } from "@/lib/supabase/interface";
@@ -92,6 +93,9 @@ export default function InventoryPage() {
 
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState("");
+
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -218,6 +222,19 @@ export default function InventoryPage() {
       await fetchItems();
     } catch (err) {
       console.error("Failed to update quantity:", err);
+    }
+  }
+
+  async function handleUpdatePrice(item: InventoryItemRecord) {
+    const price = editPrice === "" ? null : Number(editPrice);
+    if (price !== null && (!Number.isFinite(price) || price < 0)) return;
+    try {
+      await updatePrice(item.id, price);
+      setEditingPriceId(null);
+      setEditPrice("");
+      await fetchItems();
+    } catch (err) {
+      console.error("Failed to update price:", err);
     }
   }
 
@@ -467,7 +484,47 @@ export default function InventoryPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
-                    {item.price == null ? "—" : `$${Number(item.price).toFixed(2)}`}
+                    {editingPriceId === item.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-slate-800"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleUpdatePrice(item);
+                            if (e.key === "Escape") { setEditingPriceId(null); setEditPrice(""); }
+                          }}
+                        />
+                        <button
+                          onClick={() => handleUpdatePrice(item)}
+                          className="text-xs font-medium text-green-600 hover:text-green-800"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setEditingPriceId(null); setEditPrice(""); }}
+                          className="text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className="cursor-pointer hover:underline"
+                        onClick={() => {
+                          setEditingPriceId(item.id);
+                          setEditPrice(item.price != null ? String(item.price) : "");
+                        }}
+                        title="Click to edit price"
+                      >
+                        {item.price == null ? "—" : `$${Number(item.price).toFixed(2)}`}
+                      </span>
+                    )}
                   </td>
                   <td className={`px-4 py-3 ${expiryInfo(item.expiration_date).color}`}>
                     {editingId === item.id ? (
