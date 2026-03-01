@@ -25,14 +25,21 @@ function randomName() {
   return names[Math.floor(Math.random() * names.length)];
 }
 
+function generateRandomValue(): number {
+  const intPart = Math.floor(Math.random() * 200);
+  const decimalEndings = [0.25, 0.49, 0.99];
+  const decimalPart = decimalEndings[Math.floor(Math.random() * decimalEndings.length)];
+  return parseFloat((intPart + decimalPart).toFixed(2));
+}
+
 function generateLeaderboard(currentUser?: string, ownValue?: number): Person[] {
   const list: Person[] = [];
   for (let i = 0; i < 10; i++) {
-    list.push({ name: randomName(), value: Math.floor(Math.random() * 1000) });
+    list.push({ name: randomName(), value: generateRandomValue() });
   }
   if (currentUser) {
     // if ownValue provided use it, otherwise random
-    list.push({ name: currentUser, value: ownValue ?? Math.floor(Math.random() * 1000) });
+    list.push({ name: currentUser, value: ownValue ?? generateRandomValue() });
   }
   list.sort((a, b) => a.value - b.value);
   return list;
